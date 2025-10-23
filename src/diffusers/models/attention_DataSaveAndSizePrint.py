@@ -677,41 +677,54 @@ class JointTransformerBlock(nn.Module):
     ):
         joint_attention_kwargs = joint_attention_kwargs or {}
 
-        #print(f"=== JointTransformerBlock Start ===")
+        if getattr(self, 'print_inference_data', False):
+            print(f"=== JointTransformerBlock Start ===")
+            print(f"Input hidden_states shape: {hidden_states.shape}")
+            print(f"Input encoder_hidden_states shape: {encoder_hidden_states.shape}")
+            print(f"Input temb shape: {temb.shape}")
 
         # 对于图像路径 (hidden_states)
         if self.use_dual_attention:
             # 双流注意力：返回两组归一化结果
-            #print(f"  [NORM] norm1 (SD35AdaLayerNormZeroX) - Input: {hidden_states.shape}, Temb: {temb.shape}")
+            if getattr(self, 'print_inference_data', False):
+                print(f"  [NORM] norm1 (SD35AdaLayerNormZeroX) - Input: {hidden_states.shape}, Temb: {temb.shape}")
             norm_hidden_states, gate_msa, shift_mlp, scale_mlp, gate_mlp, norm_hidden_states2, gate_msa2 = self.norm1(
                 hidden_states, emb=temb
             )
-                # print(f"  [NORM] norm1 (SD35AdaLayerNormZeroX) - Output: {norm_hidden_states.shape}")
-                # print(f"  [NORM] norm1 (SD35AdaLayerNormZeroX) - Gate/Shift/Scale shapes: {gate_msa.shape}, {shift_mlp.shape}, {scale_mlp.shape}, {gate_mlp.shape}")
+            if getattr(self, 'print_inference_data', False):
+                print(f"  [NORM] norm1 (SD35AdaLayerNormZeroX) - Output: {norm_hidden_states.shape}")
+                print(f"  [NORM] norm1 (SD35AdaLayerNormZeroX) - Gate/Shift/Scale shapes: {gate_msa.shape}, {shift_mlp.shape}, {scale_mlp.shape}, {gate_mlp.shape}")
         else:
             # 单流注意力：返回一组归一化结果
-                # print(f"  [NORM] norm1 (AdaLayerNormZero) - Input: {hidden_states.shape}, Temb: {temb.shape}")
+            if getattr(self, 'print_inference_data', False):
+                print(f"  [NORM] norm1 (AdaLayerNormZero) - Input: {hidden_states.shape}, Temb: {temb.shape}")
             norm_hidden_states, gate_msa, shift_mlp, scale_mlp, gate_mlp = self.norm1(hidden_states, emb=temb)
-                # print(f"  [NORM] norm1 (AdaLayerNormZero) - Output: {norm_hidden_states.shape}")
-                # print(f"  [NORM] norm1 (AdaLayerNormZero) - Gate/Shift/Scale shapes: {gate_msa.shape}, {shift_mlp.shape}, {scale_mlp.shape}, {gate_mlp.shape}")
+            if getattr(self, 'print_inference_data', False):
+                print(f"  [NORM] norm1 (AdaLayerNormZero) - Output: {norm_hidden_states.shape}")
+                print(f"  [NORM] norm1 (AdaLayerNormZero) - Gate/Shift/Scale shapes: {gate_msa.shape}, {shift_mlp.shape}, {scale_mlp.shape}, {gate_mlp.shape}")
 
         # 对于文本路径 (encoder_hidden_states)，使用单注意力
         if self.context_pre_only:
             # 最后一层，只做归一化，不返回门控参数
-                # print(f"  [NORM] norm1_context (AdaLayerNormContinuous) - Input: {encoder_hidden_states.shape}, Temb: {temb.shape}")
+            if getattr(self, 'print_inference_data', False):
+                print(f"  [NORM] norm1_context (AdaLayerNormContinuous) - Input: {encoder_hidden_states.shape}, Temb: {temb.shape}")
             norm_encoder_hidden_states = self.norm1_context(encoder_hidden_states, temb)
-                # print(f"  [NORM] norm1_context (AdaLayerNormContinuous) - Output: {norm_encoder_hidden_states.shape}")
+            if getattr(self, 'print_inference_data', False):
+                print(f"  [NORM] norm1_context (AdaLayerNormContinuous) - Output: {norm_encoder_hidden_states.shape}")
         else:
             # 其他层，使用门控参数
-                # print(f"  [NORM] norm1_context (AdaLayerNormZero) - Input: {encoder_hidden_states.shape}, Temb: {temb.shape}")
+            if getattr(self, 'print_inference_data', False):
+                print(f"  [NORM] norm1_context (AdaLayerNormZero) - Input: {encoder_hidden_states.shape}, Temb: {temb.shape}")
             norm_encoder_hidden_states, c_gate_msa, c_shift_mlp, c_scale_mlp, c_gate_mlp = self.norm1_context(
                 encoder_hidden_states, emb=temb
             )
-                # print(f"  [NORM] norm1_context (AdaLayerNormZero) - Output: {norm_encoder_hidden_states.shape}")
-                # print(f"  [NORM] norm1_context (AdaLayerNormZero) - Gate/Shift/Scale shapes: {c_gate_msa.shape}, {c_shift_mlp.shape}, {c_scale_mlp.shape}, {c_gate_mlp.shape}")
+            if getattr(self, 'print_inference_data', False):
+                print(f"  [NORM] norm1_context (AdaLayerNormZero) - Output: {norm_encoder_hidden_states.shape}")
+                print(f"  [NORM] norm1_context (AdaLayerNormZero) - Gate/Shift/Scale shapes: {c_gate_msa.shape}, {c_shift_mlp.shape}, {c_scale_mlp.shape}, {c_gate_mlp.shape}")
 
         # Attention. 调用联合注意力
-            # print(f"  [ATTN] JointAttention Start")
+        if getattr(self, 'print_inference_data', False):
+            print(f"  [ATTN] JointAttention Start")
         # 设置JointAttention的类型和保存标志
         if self.attn is not None:
             self.attn._attention_type = 'JointAttention'
@@ -726,7 +739,8 @@ class JointTransformerBlock(nn.Module):
             **joint_attention_kwargs,
         )
 
-        # print(f"  [ATTN] JointAttention End - Output: {attn_output.shape}")
+        if getattr(self, 'print_inference_data', False):
+            print(f"  [ATTN] JointAttention End - Output: {attn_output.shape}")
 
         # 应用门控到注意力输出
         attn_output = gate_msa.unsqueeze(1) * attn_output
@@ -734,7 +748,8 @@ class JointTransformerBlock(nn.Module):
 
         # 双流注意力（SD3.5 特有）
         if self.use_dual_attention:
-            # print(f"  [ATTN] DualAttention Start")
+            if getattr(self, 'print_inference_data', False):
+                print(f"  [ATTN] DualAttention Start")
             # 设置DualAttention的类型和保存标志
             if self.attn2 is not None:
                 self.attn2._attention_type = 'DualAttention'
@@ -744,29 +759,34 @@ class JointTransformerBlock(nn.Module):
                 self.attn2._current_layer_index = getattr(self, '_current_layer_index', None)
             
             # 调试信息
-                # print(f"  [DEBUG] DualAttention设置:")
-                # print(f"    - self._current_timestep_index: {getattr(self, '_current_timestep_index', None)}")
-                # print(f"    - self._current_layer_index: {getattr(self, '_current_layer_index', None)}")
-                # print(f"    - attn2._current_timestep_index: {self.attn2._current_timestep_index}")
-                # print(f"    - attn2._current_layer_index: {self.attn2._current_layer_index}")
+            if getattr(self, 'print_inference_data', False):
+                print(f"  [DEBUG] DualAttention设置:")
+                print(f"    - self._current_timestep_index: {getattr(self, '_current_timestep_index', None)}")
+                print(f"    - self._current_layer_index: {getattr(self, '_current_layer_index', None)}")
+                print(f"    - attn2._current_timestep_index: {self.attn2._current_timestep_index}")
+                print(f"    - attn2._current_layer_index: {self.attn2._current_layer_index}")
             attn_output2 = self.attn2(hidden_states=norm_hidden_states2, **joint_attention_kwargs)
-                # print(f"  [ATTN] DualAttention End - Output: {attn_output2.shape}")
+            if getattr(self, 'print_inference_data', False):
+                print(f"  [ATTN] DualAttention End - Output: {attn_output2.shape}")
             attn_output2 = gate_msa2.unsqueeze(1) * attn_output2
             hidden_states = hidden_states + attn_output2
             
         # MLP 处理
         
         norm_hidden_states = self.norm2(hidden_states)
-        #     print(f"  [NORM] norm2 (LayerNorm) - Input: {hidden_states.shape},Output: {norm_hidden_states.shape}")
+        if getattr(self, 'print_inference_data', False):
+            print(f"  [NORM] norm2 (LayerNorm) - Input: {hidden_states.shape},Output: {norm_hidden_states.shape}")
         
         norm_hidden_states = norm_hidden_states * (1 + scale_mlp[:, None]) + shift_mlp[:, None]
         if self._chunk_size is not None:
             # "feed_forward_chunk_size" can be used to save memory
             ff_output = _chunked_feed_forward(self.ff, norm_hidden_states, self._chunk_dim, self._chunk_size)
-            #     print(f"  [MLP] ff (FeedForward) - Input: {norm_hidden_states.shape}, Output: {ff_output.shape}")
+            if getattr(self, 'print_inference_data', False):
+                print(f"  [MLP] ff (FeedForward) - Input: {norm_hidden_states.shape}, Output: {ff_output.shape}")
         else:
             ff_output = self.ff(norm_hidden_states)
-                # print(f"  [MLP] ff (FeedForward) - Input: {norm_hidden_states.shape}, Output: {ff_output.shape}")
+            if getattr(self, 'print_inference_data', False):
+                print(f"  [MLP] ff (FeedForward) - Input: {norm_hidden_states.shape}, Output: {ff_output.shape}")
         ff_output = gate_mlp.unsqueeze(1) * ff_output
 
         hidden_states = hidden_states + ff_output
@@ -781,21 +801,24 @@ class JointTransformerBlock(nn.Module):
             encoder_hidden_states = encoder_hidden_states + context_attn_output
             # MLP 处理
             norm_encoder_hidden_states = self.norm2_context(encoder_hidden_states)
-            #     print(f"  [NORM] norm2_context (LayerNorm) - Input: {encoder_hidden_states.shape}, Output: {norm_encoder_hidden_states.shape}")
+            if getattr(self, 'print_inference_data', False):
+                print(f"  [NORM] norm2_context (LayerNorm) - Input: {encoder_hidden_states.shape}, Output: {norm_encoder_hidden_states.shape}")
             norm_encoder_hidden_states = norm_encoder_hidden_states * (1 + c_scale_mlp[:, None]) + c_shift_mlp[:, None]
             if self._chunk_size is not None:
                 # "feed_forward_chunk_size" can be used to save memory
                 context_ff_output = _chunked_feed_forward(
                     self.ff_context, norm_encoder_hidden_states, self._chunk_dim, self._chunk_size
                 )
-                #     print(f"  [MLP] ff_context (FeedForward) - Input: {norm_encoder_hidden_states.shape} - Output: {context_ff_output.shape}")
+                if getattr(self, 'print_inference_data', False):
+                    print(f"  [MLP] ff_context (FeedForward) - Input: {norm_encoder_hidden_states.shape} - Output: {context_ff_output.shape}")
             else:
                 context_ff_output = self.ff_context(norm_encoder_hidden_states)
-                    # print(f"  [MLP] ff_context (FeedForward) - Input: {norm_encoder_hidden_states.shape} - Output: {context_ff_output.shape}")
+                if getattr(self, 'print_inference_data', False):
+                    print(f"  [MLP] ff_context (FeedForward) - Input: {norm_encoder_hidden_states.shape} - Output: {context_ff_output.shape}")
             encoder_hidden_states = encoder_hidden_states + c_gate_mlp.unsqueeze(1) * context_ff_output
 
-            # print(f"=== JointTransformerBlock End ===")
-            
+        if getattr(self, 'print_inference_data', False):
+            print(f"=== JointTransformerBlock End ===")
         return encoder_hidden_states, hidden_states
 
 

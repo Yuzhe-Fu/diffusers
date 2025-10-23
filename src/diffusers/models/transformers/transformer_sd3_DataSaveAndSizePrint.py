@@ -37,6 +37,7 @@ import pdb
 
 logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
 
+
 @maybe_allow_in_graph
 class SD3SingleTransformerBlock(nn.Module):
     def __init__(
@@ -357,26 +358,6 @@ class SD3Transformer2DModel(
             If `return_dict` is True, an [`~models.transformer_2d.Transformer2DModelOutput`] is returned, otherwise a
             `tuple` where the first element is the sample tensor.
         """
-        try:
-            import sys
-            import os
-            import logging
-            sys.path.append('/home/yf184/diffusers/StableDiffusion')
-            from Diffusion_config import GLOBAL_TIMESTEP_SKIP_STATE, cache_GLOBAL_TIMESTEP_DATA,update_Diffmask_inTS, TOPK_RATIO, ENABLE_TIMESTEP_SKIPPING, ENABLE_MASK, cache_noise_pred, update_mask, GLOBAL_TIMESTEP_DATA, LOOP_Layer, AllTSDataList, update_mask_inTS
-        except ImportError:
-            # If import fails, set functions to None to disable skipping
-            GLOBAL_TIMESTEP_SKIP_STATE = None
-            cache_GLOBAL_TIMESTEP_DATA = None
-            cache_noise_pred = None
-            ENABLE_MASK = False
-            get_skipped_noise_pred = None
-            update_mask = None  
-            GLOBAL_TIMESTEP_DATA = None
-            LOOP_Layer = None
-            AllTSDataList = None
-            update_mask_inTS = None
-            TOPK_RATIO = None
-        
         if joint_attention_kwargs is not None:
             joint_attention_kwargs = joint_attention_kwargs.copy()
             lora_scale = joint_attention_kwargs.pop("scale", 1.0)
@@ -397,8 +378,8 @@ class SD3Transformer2DModel(
         hidden_states = self.pos_embed(hidden_states)  # takes care of adding positional embeddings too.
         # 2. 时间文本嵌入
         temb = self.time_text_embed(timestep, pooled_projections)
-        # if getattr(self, 'print_inference_data', False):
-            # print(f"[TIME_EMBED] time_text_embed - Input timestep: {timestep.shape}, pooled_projections: {pooled_projections.shape} - Output: {temb.shape}")
+        if getattr(self, 'print_inference_data', False):
+            print(f"[TIME_EMBED] time_text_embed - Input timestep: {timestep.shape}, pooled_projections: {pooled_projections.shape} - Output: {temb.shape}")
         # 3. 上下文嵌入
         encoder_hidden_states = self.context_embedder(encoder_hidden_states)
 
@@ -407,16 +388,58 @@ class SD3Transformer2DModel(
             ip_hidden_states, ip_temb = self.image_proj(ip_adapter_image_embeds, timestep)
 
             joint_attention_kwargs.update(ip_hidden_states=ip_hidden_states, temb=ip_temb)
-        
-
         # 4. 遍历transformer块
-        current_timestep = getattr(self, '_current_timestep_index', None)
-        # pdb.set_trace()
-        # do normal computation
         for index_block, block in enumerate(self.transformer_blocks):
-
-            is_skip = True if skip_layers is not None and index_block in skip_layers else False
+            # Save data for first 3 timesteps and first 2 layers if enabled
+            current_timestep = getattr(self, '_current_timestep_index', None)
             
+            # 添加global变量捕获逻辑
+            try:
+                # 只在第一次导入模块，避免重复导入
+                if not hasattr(self, '_diffusion_config_imported'):
+                    import sys
+                    import os
+                    import importlib.util
+                    sys.path.append('/home/yf184/diffusers/StableDiffusion')
+                    
+                    # 动态导入配置模块
+                    spec = importlib.util.spec_from_file_location("diffusion_config", "/home/yf184/diffusers/StableDiffusion/Diffusion_config.py")
+                    self._diffusion_config = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(self._diffusion_config)
+                    self._diffusion_config_imported = True
+                
+                # 使用已导入的模块
+                GLOBAL_QUANTIZATION_STATE = self._diffusion_config.GLOBAL_QUANTIZATION_STATE
+                ENABLE_MASK_GENERATION = self._diffusion_config.ENABLE_MASK_GENERATION
+                
+                # Step 0: 捕获输入hidden_states (only if mask generation is enabled)
+                if ENABLE_MASK_GENERATION and GLOBAL_QUANTIZATION_STATE['current_step'] == 0 and not GLOBAL_QUANTIZATION_STATE['first_step_completed']:
+                    GLOBAL_QUANTIZATION_STATE['layer_inputs'].append(hidden_states.clone().detach())
+                    print(f"Captured input for layer {index_block}, shape: {hidden_states.shape}")
+                    print(f"Total layers captured: {len(GLOBAL_QUANTIZATION_STATE['layer_inputs'])}")
+                    
+                    # 检查是否捕获了所有层
+                    if len(GLOBAL_QUANTIZATION_STATE['layer_inputs']) == 24:
+                        print("All 24 layers captured, generating mask...")
+                        create_mask_from_adjacent_differences = self._diffusion_config.create_mask_from_adjacent_differences
+                        GLOBAL_QUANTIZATION_STATE['mask_matrix'] = create_mask_from_adjacent_differences()
+                        GLOBAL_QUANTIZATION_STATE['first_step_completed'] = True
+                        print("Mask generated successfully!")
+                        print(f"Mask matrix shape: {GLOBAL_QUANTIZATION_STATE['mask_matrix'].shape}")
+                        print(f"Mask matrix size: {GLOBAL_QUANTIZATION_STATE['mask_matrix'].numel()} elements")
+                elif not ENABLE_MASK_GENERATION:
+                    # Skip mask generation if disabled
+                    if GLOBAL_QUANTIZATION_STATE['current_step'] == 0 and not GLOBAL_QUANTIZATION_STATE['first_step_completed']:
+                        GLOBAL_QUANTIZATION_STATE['first_step_completed'] = True
+                        print("Mask generation is disabled, skipping mask creation step")
+                    
+            except ImportError:
+                pass  # 如果没有导入成功，继续正常执行
+            
+            # use hidden_states here
+            
+            is_skip = True if skip_layers is not None and index_block in skip_layers else False
+
             if torch.is_grad_enabled() and self.gradient_checkpointing and not is_skip:
                 encoder_hidden_states, hidden_states = self._gradient_checkpointing_func(
                     block,
@@ -432,7 +455,14 @@ class SD3Transformer2DModel(
                         module._current_layer_index = index_block
                     if hasattr(module, '_current_timestep_index'):
                         module._current_timestep_index = getattr(self, '_current_timestep_index', None)
-
+                    if hasattr(module, 'save_inference_data'):
+                        module.save_inference_data = getattr(self, 'save_inference_data', False)
+                    if hasattr(module, 'print_inference_data'):
+                        module.print_inference_data = getattr(self, 'print_inference_data', False)
+                
+                # 设置JointTransformerBlock的save_inference_data和print_inference_data标志
+                block.save_inference_data = getattr(self, 'save_inference_data', False)
+                block.print_inference_data = getattr(self, 'print_inference_data', False)
                 block._current_timestep_index = getattr(self, '_current_timestep_index', None)
                 block._current_layer_index = index_block
                 
@@ -440,10 +470,15 @@ class SD3Transformer2DModel(
                 if hasattr(block, 'attn') and block.attn is not None:
                     block.attn._current_layer_index = index_block
                     block.attn._current_timestep_index = getattr(self, '_current_timestep_index', None)
+                    block.attn.save_inference_data = getattr(self, 'save_inference_data', False)
+                    block.attn.print_inference_data = getattr(self, 'print_inference_data', False)
+                
                 if hasattr(block, 'attn2') and block.attn2 is not None:
                     block.attn2._current_layer_index = index_block
                     block.attn2._current_timestep_index = getattr(self, '_current_timestep_index', None)
-                           
+                    block.attn2.save_inference_data = getattr(self, 'save_inference_data', False)
+                    block.attn2.print_inference_data = getattr(self, 'print_inference_data', False)
+                
                 encoder_hidden_states, hidden_states = block(
                     hidden_states=hidden_states,
                     encoder_hidden_states=encoder_hidden_states,
@@ -451,51 +486,10 @@ class SD3Transformer2DModel(
                     joint_attention_kwargs=joint_attention_kwargs,
                 )
 
-                if ENABLE_TIMESTEP_SKIPPING and GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep] != 0:
-                    mask_num = index_block // LOOP_Layer
-                    full_mask = torch.ones(4096, dtype=torch.bool, device=hidden_states.device)
-                    full_context_mask = torch.ones(333, dtype=torch.bool, device=hidden_states.device)
-                    if ENABLE_MASK:
-                        mask = GLOBAL_TIMESTEP_SKIP_STATE['mask_cache'][mask_num]
-                        full_mask[mask] = True #False
-                        if index_block != 23:
-                            context_mask = GLOBAL_TIMESTEP_SKIP_STATE['context_mask_cache'][mask_num]
-                            full_context_mask[context_mask] = True #False
-                        else:
-                            pass
-                    full_mask = full_mask.unsqueeze(0).unsqueeze(-1)  # [1, 4096, 1]
-                    full_context_mask = full_context_mask.unsqueeze(0).unsqueeze(-1)  # [1, 333, 1]
-                    if GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep] == 1:
-                        psi_hidden_states = 2*AllTSDataList[-1].end[index_block]-AllTSDataList[-2].end[index_block]
-                        # hidden_states = (hidden_states + psi_hidden_states) / 2
-                        hidden_states = torch.where(full_mask, hidden_states, psi_hidden_states)
-                        # pdb.set_trace()
-                        if index_block != 23:
-                            psi_encoder_hidden_states = 2*AllTSDataList[-1].end_context[index_block]-AllTSDataList[-2].end_context[index_block]
-                            # encoder_hidden_states = (encoder_hidden_states + psi_encoder_hidden_states) / 2
-                            encoder_hidden_states = torch.where(full_context_mask, encoder_hidden_states, psi_encoder_hidden_states)
-                    else:
-                        psi_hidden_states = AllTSDataList[-2].end[index_block]
-                        # hidden_states = (hidden_states + psi_hidden_states) / 2
-                        hidden_states = torch.where(full_mask, hidden_states, psi_hidden_states)
-                        if index_block != 23:
-                            psi_encoder_hidden_states = AllTSDataList[-2].end_context[index_block]
-                            # encoder_hidden_states = (encoder_hidden_states + psi_encoder_hidden_states) / 2
-                            encoder_hidden_states = torch.where(full_context_mask, encoder_hidden_states, psi_encoder_hidden_states)
-                
-                if ENABLE_MASK:
-                    GLOBAL_TIMESTEP_DATA.append('end', hidden_states)
-                    GLOBAL_TIMESTEP_DATA.append('end_context', encoder_hidden_states)
-
-        # controlnet residual
-        if block_controlnet_hidden_states is not None and block.context_pre_only is False:
-            interval_control = len(self.transformer_blocks) / len(block_controlnet_hidden_states)
-            hidden_states = hidden_states + block_controlnet_hidden_states[int(index_block / interval_control)]
-        
-        cache_GLOBAL_TIMESTEP_DATA(GLOBAL_TIMESTEP_DATA)
-        if ENABLE_MASK and GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep] == 0:
-            update_mask_inTS(TOPK_RATIO)
-            # update_Diffmask_inTS(0, current_timestep)
+            # controlnet residual
+            if block_controlnet_hidden_states is not None and block.context_pre_only is False:
+                interval_control = len(self.transformer_blocks) / len(block_controlnet_hidden_states)
+                hidden_states = hidden_states + block_controlnet_hidden_states[int(index_block / interval_control)]
 
         hidden_states = self.norm_out(hidden_states, temb)
         hidden_states = self.proj_out(hidden_states)

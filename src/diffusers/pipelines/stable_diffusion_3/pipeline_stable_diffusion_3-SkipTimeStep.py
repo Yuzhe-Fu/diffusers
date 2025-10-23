@@ -1055,6 +1055,18 @@ class StableDiffusion3Pipeline(DiffusionPipeline, SD3LoraLoaderMixin, FromSingle
         self.transformer._current_timestep_index = None
         
         # Import timestep skipping functions once outside the loop
+        try:
+            import sys
+            import os
+            import logging
+            sys.path.append('/home/yf184/diffusers/StableDiffusion')
+            from Diffusion_config import should_skip_timestep, get_skipped_noise_pred, cache_noise_pred, ENABLE_TIMESTEP_SKIPPING
+        except ImportError:
+            # If import fails, set functions to None to disable skipping
+            should_skip_timestep = None
+            get_skipped_noise_pred = None
+            cache_noise_pred = None
+            ENABLE_TIMESTEP_SKIPPING = False
         
         with self.progress_bar(total=num_inference_steps) as progress_bar:
             for i, t in enumerate(timesteps):
@@ -1064,50 +1076,57 @@ class StableDiffusion3Pipeline(DiffusionPipeline, SD3LoraLoaderMixin, FromSingle
                 # Set current timestep index for data saving
                 self.transformer._current_timestep_index = i
                 
+                if getattr(self.transformer, 'print_inference_data', False):
+                    print(f"in pipeline_stable_diffusion_3.py-1058, TimeStep {i},Actual timestep value: {t.item()}")
+                
                 # Check if timestep skipping is enabled and should skip this step
-                # print(f'for timestep {i}, should_skip_timestep: {should_skip_timestep(i)}, ENABLE_TIMESTEP_SKIPPING: {ENABLE_TIMESTEP_SKIPPING}, ENABLE_MASK: {ENABLE_MASK}')
-                
-                # Normal computation: transformer + guidance
-                # expand the latents if we are doing classifier free guidance
-                latent_model_input = torch.cat([latents] * 2) if self.do_classifier_free_guidance else latents
-                # broadcast to batch dimension in a way that's compatible with ONNX/Core ML
-                timestep = t.expand(latent_model_input.shape[0])
-                noise_pred = self.transformer(
-                    hidden_states=latent_model_input, # change, ([2, 16, 128, 128])
-                    timestep=timestep, # change 
-                    encoder_hidden_states=prompt_embeds, # unchange, ([2, 333, 4096])
-                    pooled_projections=pooled_prompt_embeds, # unchange
-                    joint_attention_kwargs=self.joint_attention_kwargs,
-                    return_dict=False,
-                )[0]
-                # pdb.set_trace()
-
-                # perform guidance
-                if self.do_classifier_free_guidance:
-                    noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
-                    noise_pred = noise_pred_uncond + self.guidance_scale * (noise_pred_text - noise_pred_uncond)
-                
-                should_skip_layers = (
-                    True
-                    if i > num_inference_steps * skip_layer_guidance_start
-                    and i < num_inference_steps * skip_layer_guidance_stop
-                    else False
-                )
-                if skip_guidance_layers is not None and should_skip_layers:
-                    timestep = t.expand(latents.shape[0])
-                    latent_model_input = latents
-                    noise_pred_skip_layers = self.transformer(
+                print(f'for timestep {i}, should_skip_timestep: {should_skip_timestep(i)}')
+                if ENABLE_TIMESTEP_SKIPPING and should_skip_timestep is not None and should_skip_timestep(i):
+                    # Skip transformer computation and guidance, use cached noise_pred
+                    # logger.info(f"Timestep {i}: Skipping transformer computation, using interpolation/reuse")
+                    noise_pred = get_skipped_noise_pred(i)
+                else:
+                    # Normal computation: transformer + guidance
+                    # expand the latents if we are doing classifier free guidance
+                    latent_model_input = torch.cat([latents] * 2) if self.do_classifier_free_guidance else latents
+                    # broadcast to batch dimension in a way that's compatible with ONNX/Core ML
+                    timestep = t.expand(latent_model_input.shape[0])
+                    noise_pred = self.transformer(
                         hidden_states=latent_model_input,
                         timestep=timestep,
-                        encoder_hidden_states=original_prompt_embeds,
-                        pooled_projections=original_pooled_prompt_embeds,
+                        encoder_hidden_states=prompt_embeds,
+                        pooled_projections=pooled_prompt_embeds,
                         joint_attention_kwargs=self.joint_attention_kwargs,
                         return_dict=False,
-                        skip_layers=skip_guidance_layers,
                     )[0]
-                    noise_pred = (
-                        noise_pred + (noise_pred_text - noise_pred_skip_layers) * self._skip_layer_guidance_scale
+                    # pdb.set_trace()
+
+                    # perform guidance
+                    if self.do_classifier_free_guidance:
+                        noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
+                        noise_pred = noise_pred_uncond + self.guidance_scale * (noise_pred_text - noise_pred_uncond)
+                    
+                    should_skip_layers = (
+                        True
+                        if i > num_inference_steps * skip_layer_guidance_start
+                        and i < num_inference_steps * skip_layer_guidance_stop
+                        else False
                     )
+                    if skip_guidance_layers is not None and should_skip_layers:
+                        timestep = t.expand(latents.shape[0])
+                        latent_model_input = latents
+                        noise_pred_skip_layers = self.transformer(
+                            hidden_states=latent_model_input,
+                            timestep=timestep,
+                            encoder_hidden_states=original_prompt_embeds,
+                            pooled_projections=original_pooled_prompt_embeds,
+                            joint_attention_kwargs=self.joint_attention_kwargs,
+                            return_dict=False,
+                            skip_layers=skip_guidance_layers,
+                        )[0]
+                        noise_pred = (
+                            noise_pred + (noise_pred_text - noise_pred_skip_layers) * self._skip_layer_guidance_scale
+                        )
                     
 
 
@@ -1116,9 +1135,12 @@ class StableDiffusion3Pipeline(DiffusionPipeline, SD3LoraLoaderMixin, FromSingle
 
                 # Change Here:
                 # logger.info(f"Timestep {i}: size for latents: {latents.shape}")
-                # latents's batch size is always 1, ([1, 16, 128, 128])
-                # pdb.set_trace()
+                # latents's batch size is always 1
                 latents = self.scheduler.step(noise_pred, t, latents, return_dict=False)[0]
+
+                # Cache noise_pred for future skipping (after guidance)
+                if cache_noise_pred is not None:
+                    cache_noise_pred(noise_pred, i)
 
                 if latents.dtype != latents_dtype:
                     if torch.backends.mps.is_available():

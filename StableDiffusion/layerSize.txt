@@ -1,0 +1,842 @@
+in pipeline_stable_diffusion_3.py-1058, TimeStep 0,Actual timestep value: 1000.0
+in tf_sd3.py-388, Layer 0 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 1 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 2 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 3 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 4 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 5 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 6 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 7 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 8 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 9 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 10 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 11 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 12 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 13 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 14 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 15 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 16 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 17 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 18 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 19 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 20 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 21 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 22 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 23 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in pipeline_stable_diffusion_3.py-1058, TimeStep 1,Actual timestep value: 987.380615234375
+in tf_sd3.py-388, Layer 0 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 1 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 2 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 3 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 4 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 5 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 6 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 7 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 8 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 9 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 10 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 11 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 12 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 13 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 14 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 15 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 16 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 17 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 18 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 19 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 20 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 21 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 22 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 23 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in pipeline_stable_diffusion_3.py-1058, TimeStep 2,Actual timestep value: 974.1077270507812
+in tf_sd3.py-388, Layer 0 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 1 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 2 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 3 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 4 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 5 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 6 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 7 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 8 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 9 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 10 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 11 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 12 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 13 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 14 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 15 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 16 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 17 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 18 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 19 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 20 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 21 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 22 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 23 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in pipeline_stable_diffusion_3.py-1058, TimeStep 3,Actual timestep value: 960.1293334960938
+in tf_sd3.py-388, Layer 0 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 1 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 2 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 3 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 4 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 5 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 6 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 7 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 8 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 9 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 10 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 11 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 12 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 13 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 14 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 15 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 16 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 17 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 18 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 19 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 20 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 21 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 22 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 23 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in pipeline_stable_diffusion_3.py-1058, TimeStep 4,Actual timestep value: 945.3875122070312
+in tf_sd3.py-388, Layer 0 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 1 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 2 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 3 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 4 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 5 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 6 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 7 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 8 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 9 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 10 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 11 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 12 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 13 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 14 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 15 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 16 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 17 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 18 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 19 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 20 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 21 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 22 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 23 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in pipeline_stable_diffusion_3.py-1058, TimeStep 5,Actual timestep value: 929.8179321289062
+in tf_sd3.py-388, Layer 0 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 1 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 2 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 3 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 4 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 5 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 6 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 7 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 8 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 9 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 10 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 11 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 12 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 13 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 14 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 15 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 16 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 17 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 18 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 19 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 20 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 21 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 22 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 23 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in pipeline_stable_diffusion_3.py-1058, TimeStep 6,Actual timestep value: 913.3489990234375
+in tf_sd3.py-388, Layer 0 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 1 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 2 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 3 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 4 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 5 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 6 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 7 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 8 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 9 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 10 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 11 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 12 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: True
+in tf_sd3.py-388, Layer 13 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 14 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 15 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 16 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 17 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 18 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 19 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 20 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 21 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False
+in tf_sd3.py-388, Layer 22 ===
+Hidden states input shape: torch.Size([2, 4096, 1536])
+Encoder hidden states input shape: torch.Size([2, 333, 1536])
+Temb shape: torch.Size([2, 1536])
+One JointTransformerBlock, Use dual attention: False

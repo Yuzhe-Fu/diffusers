@@ -37,6 +37,7 @@ import pdb
 
 logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
 
+
 @maybe_allow_in_graph
 class SD3SingleTransformerBlock(nn.Module):
     def __init__(
@@ -357,26 +358,6 @@ class SD3Transformer2DModel(
             If `return_dict` is True, an [`~models.transformer_2d.Transformer2DModelOutput`] is returned, otherwise a
             `tuple` where the first element is the sample tensor.
         """
-        try:
-            import sys
-            import os
-            import logging
-            sys.path.append('/home/yf184/diffusers/StableDiffusion')
-            from Diffusion_config import GLOBAL_TIMESTEP_SKIP_STATE, cache_GLOBAL_TIMESTEP_DATA,update_Diffmask_inTS, TOPK_RATIO, ENABLE_TIMESTEP_SKIPPING, ENABLE_MASK, cache_noise_pred, update_mask, GLOBAL_TIMESTEP_DATA, LOOP_Layer, AllTSDataList, update_mask_inTS
-        except ImportError:
-            # If import fails, set functions to None to disable skipping
-            GLOBAL_TIMESTEP_SKIP_STATE = None
-            cache_GLOBAL_TIMESTEP_DATA = None
-            cache_noise_pred = None
-            ENABLE_MASK = False
-            get_skipped_noise_pred = None
-            update_mask = None  
-            GLOBAL_TIMESTEP_DATA = None
-            LOOP_Layer = None
-            AllTSDataList = None
-            update_mask_inTS = None
-            TOPK_RATIO = None
-        
         if joint_attention_kwargs is not None:
             joint_attention_kwargs = joint_attention_kwargs.copy()
             lora_scale = joint_attention_kwargs.pop("scale", 1.0)
@@ -397,8 +378,8 @@ class SD3Transformer2DModel(
         hidden_states = self.pos_embed(hidden_states)  # takes care of adding positional embeddings too.
         # 2. 时间文本嵌入
         temb = self.time_text_embed(timestep, pooled_projections)
-        # if getattr(self, 'print_inference_data', False):
-            # print(f"[TIME_EMBED] time_text_embed - Input timestep: {timestep.shape}, pooled_projections: {pooled_projections.shape} - Output: {temb.shape}")
+        if getattr(self, 'print_inference_data', False):
+            print(f"[TIME_EMBED] time_text_embed - Input timestep: {timestep.shape}, pooled_projections: {pooled_projections.shape} - Output: {temb.shape}")
         # 3. 上下文嵌入
         encoder_hidden_states = self.context_embedder(encoder_hidden_states)
 
@@ -408,95 +389,166 @@ class SD3Transformer2DModel(
 
             joint_attention_kwargs.update(ip_hidden_states=ip_hidden_states, temb=ip_temb)
         
+        # 添加global变量捕获逻辑
+        # try:
+        #     # 只在第一次导入模块，避免重复导入
+        #     if not hasattr(self, '_diffusion_config_imported'):
+        #         import sys
+        #         import os
+        #         import importlib.util
+        #         sys.path.append('/home/yf184/diffusers/StableDiffusion')
+                
+        #         # 动态导入配置模块
+        #         spec = importlib.util.spec_from_file_location("diffusion_config", "/home/yf184/diffusers/StableDiffusion/Diffusion_config.py")
+        #         self._config = importlib.util.module_from_spec(spec)
+        #         spec.loader.exec_module(self._config)
+        #         self._diffusion_config_imported = True
+                
+        # except ImportError:
+        #     pass  # 如果没有导入成功，继续正常执行
+
+        try:
+            import sys
+            import os
+            import logging
+            sys.path.append('/home/yf184/diffusers/StableDiffusion')
+            from Diffusion_config import GLOBAL_TIMESTEP_SKIP_STATE, ENABLE_TIMESTEP_SKIPPING, cache_noise_pred, get_skipped_noise_pred, update_mask, ENABLE_MASK
+        except ImportError:
+            # If import fails, set functions to None to disable skipping
+            GLOBAL_TIMESTEP_SKIP_STATE = None
+            cache_noise_pred = None
+            get_skipped_noise_pred = None
+            update_mask = None
+            ENABLE_TIMESTEP_SKIPPING = False
+            ENABLE_MASK = False
 
         # 4. 遍历transformer块
         current_timestep = getattr(self, '_current_timestep_index', None)
         # pdb.set_trace()
-        # do normal computation
-        for index_block, block in enumerate(self.transformer_blocks):
+        if not ENABLE_TIMESTEP_SKIPPING or (ENABLE_TIMESTEP_SKIPPING and GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep] == 0):
+            # do normal computation
+            for index_block, block in enumerate(self.transformer_blocks):
 
-            is_skip = True if skip_layers is not None and index_block in skip_layers else False
+                is_skip = True if skip_layers is not None and index_block in skip_layers else False
+
+                if torch.is_grad_enabled() and self.gradient_checkpointing and not is_skip:
+                    encoder_hidden_states, hidden_states = self._gradient_checkpointing_func(
+                        block,
+                        hidden_states,
+                        encoder_hidden_states,
+                        temb,
+                        joint_attention_kwargs,
+                    )
+                elif not is_skip:
+                    # 设置当前层索引和保存标志用于保存softmax数据
+                    for module in block.modules():
+                        if hasattr(module, '_current_layer_index'):
+                            module._current_layer_index = index_block
+                        if hasattr(module, '_current_timestep_index'):
+                            module._current_timestep_index = getattr(self, '_current_timestep_index', None)
+
+                    block._current_timestep_index = getattr(self, '_current_timestep_index', None)
+                    block._current_layer_index = index_block
+                    
+                    # 直接设置attention模块的属性
+                    if hasattr(block, 'attn') and block.attn is not None:
+                        block.attn._current_layer_index = index_block
+                        block.attn._current_timestep_index = getattr(self, '_current_timestep_index', None)
+                        # block.attn.save_inference_data = getattr(self, 'save_inference_data', False)
+                        # block.attn.print_inference_data = getattr(self, 'print_inference_data', False)
+                    
+                    if hasattr(block, 'attn2') and block.attn2 is not None:
+                        block.attn2._current_layer_index = index_block
+                        block.attn2._current_timestep_index = getattr(self, '_current_timestep_index', None)
+                        # block.attn2.save_inference_data = getattr(self, 'save_inference_data', False)
+                        # block.attn2.print_inference_data = getattr(self, 'print_inference_data', False)
+                                    
+                    encoder_hidden_states, hidden_states = block(
+                        hidden_states=hidden_states,
+                        encoder_hidden_states=encoder_hidden_states,
+                        temb=temb,
+                        joint_attention_kwargs=joint_attention_kwargs,
+                    )
+
+            # controlnet residual
+            if block_controlnet_hidden_states is not None and block.context_pre_only is False:
+                interval_control = len(self.transformer_blocks) / len(block_controlnet_hidden_states)
+                hidden_states = hidden_states + block_controlnet_hidden_states[int(index_block / interval_control)]
             
-            if torch.is_grad_enabled() and self.gradient_checkpointing and not is_skip:
-                encoder_hidden_states, hidden_states = self._gradient_checkpointing_func(
-                    block,
-                    hidden_states,
-                    encoder_hidden_states,
-                    temb,
-                    joint_attention_kwargs,
-                )
-            elif not is_skip:
-                # 设置当前层索引和保存标志用于保存softmax数据
-                for module in block.modules():
-                    if hasattr(module, '_current_layer_index'):
-                        module._current_layer_index = index_block
-                    if hasattr(module, '_current_timestep_index'):
-                        module._current_timestep_index = getattr(self, '_current_timestep_index', None)
+            cache_noise_pred(hidden_states, current_timestep, keep_all=True)
+            update_mask(0.1)
 
-                block._current_timestep_index = getattr(self, '_current_timestep_index', None)
-                block._current_layer_index = index_block
+        else: # GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep] == 1:
+            # do PSI/reuse computation
+            hidden_states_pred = get_skipped_noise_pred(GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep], current_timestep)
+            if ENABLE_MASK:
+                # use the mask to prune the noise_pred, where mask=1 means keep, mask=0 means prune
+                mask = GLOBAL_TIMESTEP_SKIP_STATE['mask_cache']
+                # hidden_states = hidden_states[:, mask, :]
+
+                # only computation for the outliers
+                for index_block, block in enumerate(self.transformer_blocks):
+
+                    is_skip = True if skip_layers is not None and index_block in skip_layers else False
+                    if torch.is_grad_enabled() and self.gradient_checkpointing and not is_skip:
+                        encoder_hidden_states, hidden_states = self._gradient_checkpointing_func(
+                            block,
+                            hidden_states,
+                            encoder_hidden_states,
+                            temb,
+                            joint_attention_kwargs,
+                        )
+                    elif not is_skip:
+                        # 设置当前层索引和保存标志用于保存softmax数据
+                        for module in block.modules():
+                            if hasattr(module, '_current_layer_index'):
+                                module._current_layer_index = index_block
+                            if hasattr(module, '_current_timestep_index'):
+                                module._current_timestep_index = getattr(self, '_current_timestep_index', None)
+
+                        block._current_timestep_index = getattr(self, '_current_timestep_index', None)
+                        block._current_layer_index = index_block
+                        
+                        # 直接设置attention模块的属性
+                        if hasattr(block, 'attn') and block.attn is not None:
+                            block.attn._current_layer_index = index_block
+                            block.attn._current_timestep_index = getattr(self, '_current_timestep_index', None)
+                            # block.attn.save_inference_data = getattr(self, 'save_inference_data', False)
+                            # block.attn.print_inference_data = getattr(self, 'print_inference_data', False)
+                        
+                        if hasattr(block, 'attn2') and block.attn2 is not None:
+                            block.attn2._current_layer_index = index_block
+                            block.attn2._current_timestep_index = getattr(self, '_current_timestep_index', None)
+                            # block.attn2.save_inference_data = getattr(self, 'save_inference_data', False)
+                            # block.attn2.print_inference_data = getattr(self, 'print_inference_data', False)
+                                        
+                        encoder_hidden_states, hidden_states = block(
+                            hidden_states=hidden_states,
+                            encoder_hidden_states=encoder_hidden_states,
+                            temb=temb,
+                            joint_attention_kwargs=joint_attention_kwargs,
+                        )
+
+                # controlnet residual
+                if block_controlnet_hidden_states is not None and block.context_pre_only is False:
+                    interval_control = len(self.transformer_blocks) / len(block_controlnet_hidden_states)
+                    hidden_states = hidden_states + block_controlnet_hidden_states[int(index_block / interval_control)]
                 
-                # 直接设置attention模块的属性
-                if hasattr(block, 'attn') and block.attn is not None:
-                    block.attn._current_layer_index = index_block
-                    block.attn._current_timestep_index = getattr(self, '_current_timestep_index', None)
-                if hasattr(block, 'attn2') and block.attn2 is not None:
-                    block.attn2._current_layer_index = index_block
-                    block.attn2._current_timestep_index = getattr(self, '_current_timestep_index', None)
-                           
-                encoder_hidden_states, hidden_states = block(
-                    hidden_states=hidden_states,
-                    encoder_hidden_states=encoder_hidden_states,
-                    temb=temb,
-                    joint_attention_kwargs=joint_attention_kwargs,
-                )
+                # now combine the prediected hidden_states with the outliers hidden_states
+                result = hidden_states_pred.clone()
+                # pdb.set_trace()
+                result[:, mask, :] = hidden_states[:, mask, :]
+                hidden_states = result
+            else:
+                hidden_states = hidden_states_pred
+            cache_noise_pred(hidden_states, current_timestep, keep_all=True)
 
-                if ENABLE_TIMESTEP_SKIPPING and GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep] != 0:
-                    mask_num = index_block // LOOP_Layer
-                    full_mask = torch.ones(4096, dtype=torch.bool, device=hidden_states.device)
-                    full_context_mask = torch.ones(333, dtype=torch.bool, device=hidden_states.device)
-                    if ENABLE_MASK:
-                        mask = GLOBAL_TIMESTEP_SKIP_STATE['mask_cache'][mask_num]
-                        full_mask[mask] = True #False
-                        if index_block != 23:
-                            context_mask = GLOBAL_TIMESTEP_SKIP_STATE['context_mask_cache'][mask_num]
-                            full_context_mask[context_mask] = True #False
-                        else:
-                            pass
-                    full_mask = full_mask.unsqueeze(0).unsqueeze(-1)  # [1, 4096, 1]
-                    full_context_mask = full_context_mask.unsqueeze(0).unsqueeze(-1)  # [1, 333, 1]
-                    if GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep] == 1:
-                        psi_hidden_states = 2*AllTSDataList[-1].end[index_block]-AllTSDataList[-2].end[index_block]
-                        # hidden_states = (hidden_states + psi_hidden_states) / 2
-                        hidden_states = torch.where(full_mask, hidden_states, psi_hidden_states)
-                        # pdb.set_trace()
-                        if index_block != 23:
-                            psi_encoder_hidden_states = 2*AllTSDataList[-1].end_context[index_block]-AllTSDataList[-2].end_context[index_block]
-                            # encoder_hidden_states = (encoder_hidden_states + psi_encoder_hidden_states) / 2
-                            encoder_hidden_states = torch.where(full_context_mask, encoder_hidden_states, psi_encoder_hidden_states)
-                    else:
-                        psi_hidden_states = AllTSDataList[-2].end[index_block]
-                        # hidden_states = (hidden_states + psi_hidden_states) / 2
-                        hidden_states = torch.where(full_mask, hidden_states, psi_hidden_states)
-                        if index_block != 23:
-                            psi_encoder_hidden_states = AllTSDataList[-2].end_context[index_block]
-                            # encoder_hidden_states = (encoder_hidden_states + psi_encoder_hidden_states) / 2
-                            encoder_hidden_states = torch.where(full_context_mask, encoder_hidden_states, psi_encoder_hidden_states)
-                
-                if ENABLE_MASK:
-                    GLOBAL_TIMESTEP_DATA.append('end', hidden_states)
-                    GLOBAL_TIMESTEP_DATA.append('end_context', encoder_hidden_states)
 
-        # controlnet residual
-        if block_controlnet_hidden_states is not None and block.context_pre_only is False:
-            interval_control = len(self.transformer_blocks) / len(block_controlnet_hidden_states)
-            hidden_states = hidden_states + block_controlnet_hidden_states[int(index_block / interval_control)]
+        # elif GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep] == 2:
+        #     # do reuse computation
+        #     pass
+
         
-        cache_GLOBAL_TIMESTEP_DATA(GLOBAL_TIMESTEP_DATA)
-        if ENABLE_MASK and GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep] == 0:
-            update_mask_inTS(TOPK_RATIO)
-            # update_Diffmask_inTS(0, current_timestep)
-
         hidden_states = self.norm_out(hidden_states, temb)
         hidden_states = self.proj_out(hidden_states)
 

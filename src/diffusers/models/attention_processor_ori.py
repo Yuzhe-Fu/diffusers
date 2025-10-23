@@ -13,7 +13,6 @@
 # limitations under the License.
 import inspect
 import math
-import os
 from typing import Callable, List, Optional, Tuple, Union
 
 import torch
@@ -1435,127 +1434,13 @@ class JointAttnProcessor2_0:
         **kwargs,
     ) -> torch.FloatTensor:
         residual = hidden_states
+
         batch_size = hidden_states.shape[0]
-        
-        current_timestep = getattr(attn, '_current_timestep_index', None)
-        current_layer = getattr(attn, '_current_layer_index', None)
-        attention_type = getattr(attn, '_attention_type', 'JointAttention')
-        save_inference_data = getattr(attn, 'save_inference_data', False)
-
-        try:
-            import sys
-            import os
-            import logging
-            sys.path.append('/home/yf184/diffusers/StableDiffusion')
-            from Diffusion_config import GLOBAL_TIMESTEP_DATA,Hidden_MASK,Context_MASK, AllTSDataList, GLOBAL_TIMESTEP_SKIP_STATE, LOOP_Layer, ENABLE_TIMESTEP_SKIPPING, cache_noise_pred, get_skipped_noise_pred, update_mask, ENABLE_MASK
-
-        except ImportError:
-            # If import fails, set functions to None to disable skipping
-            GLOBAL_TIMESTEP_DATA = None
-            AllTSDataList = None
-            GLOBAL_TIMESTEP_SKIP_STATE = None
-            LOOP_Layer = None
-            cache_noise_pred = None
-            get_skipped_noise_pred = None
-            update_mask = None
-            ENABLE_TIMESTEP_SKIPPING = False
-            ENABLE_MASK = False
 
         # `sample` projections.
-        # if getattr(attn, 'print_inference_data', False):
-        #     print(f"    [LINEAR] to_q - Input: {hidden_states.shape}, Weight: {attn.to_q.weight.shape}, Bias: {attn.to_q.bias.shape if attn.to_q.bias is not None else None}")
         query = attn.to_q(hidden_states) # image features Q
-        # if getattr(attn, 'print_inference_data', False):
-        #     print(f"    [LINEAR] to_q - Output: {query.shape}")
-        
-        # if getattr(attn, 'print_inference_data', False):
-        #     print(f"    [LINEAR] to_k - Input: {hidden_states.shape}, Weight: {attn.to_k.weight.shape}, Bias: {attn.to_k.bias.shape if attn.to_k.bias is not None else None}")
         key = attn.to_k(hidden_states) # image features K
-        # if getattr(attn, 'print_inference_data', False):
-        #     print(f"    [LINEAR] to_k - Output: {key.shape}")
-        
-        # if getattr(attn, 'print_inference_data', False):
-        #     print(f"    [LINEAR] to_v - Input: {hidden_states.shape}, Weight: {attn.to_v.weight.shape}, Bias: {attn.to_v.bias.shape if attn.to_v.bias is not None else None}")
         value = attn.to_v(hidden_states) # image features V
-        # if getattr(attn, 'print_inference_data', False):
-        #     print(f"    [LINEAR] to_v - Output: {value.shape}")
-        # apply algorithm here
-        if ENABLE_TIMESTEP_SKIPPING and GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep] != 0:
-            mask_num = current_layer // LOOP_Layer
-            
-            full_mask = torch.zeros(4096, dtype=torch.bool, device=query.device)
-            if ENABLE_MASK:
-                # pdb.set_trace()
-                mask = GLOBAL_TIMESTEP_SKIP_STATE['mask_cache'][mask_num] # image mask
-                full_mask[mask] = Hidden_MASK #True
-            full_mask = full_mask.unsqueeze(0).unsqueeze(-1)  # [1, 4096, 1]
-
-            if GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep] == 1:
-                if attention_type == 'JointAttention':
-                    # pdb.set_trace()
-                    psi_query = 2*AllTSDataList[-1].JA_toq[current_layer]-AllTSDataList[-2].JA_toq[current_layer]
-                    psi_key = 2*AllTSDataList[-1].JA_tok[current_layer]-AllTSDataList[-2].JA_tok[current_layer]
-                    psi_value = 2*AllTSDataList[-1].JA_tov[current_layer]-AllTSDataList[-2].JA_tov[current_layer]
-                    # print(f"PSI JA toqkv in TS {current_timestep} layer {current_layer}")
-                elif attention_type == 'DualAttention':
-                    psi_query = 2*AllTSDataList[-1].DA_toq[current_layer]-AllTSDataList[-2].DA_toq[current_layer]
-                    psi_key = 2*AllTSDataList[-1].DA_tok[current_layer]-AllTSDataList[-2].DA_tok[current_layer]
-                    psi_value = 2*AllTSDataList[-1].DA_tov[current_layer]-AllTSDataList[-2].DA_tov[current_layer]
-                    # print(f"PSI DA toqkv in TS {current_timestep} layer {current_layer}")
-                # query = (query + psi_query) / 2
-                # key = (key + psi_key) / 2
-                # value = (value + psi_value) / 2
-
-                query = torch.where(full_mask, query, psi_query)    
-                key = torch.where(full_mask, key, psi_key)
-                value = torch.where(full_mask, value, psi_value)
-                # not replace, rather than mean
-                # new_query = (query + psi_query) / 2
-                # new_key = (key + psi_key) / 2
-                # new_value = (value + psi_value) / 2
-                # query = torch.where(full_mask, new_query, psi_query)    
-                # key = torch.where(full_mask, new_key, psi_key)
-                # value = torch.where(full_mask, new_value, psi_value)
-
-            else: # reuse
-                if attention_type == 'JointAttention':
-                    psi_query = AllTSDataList[-2].JA_toq[current_layer]
-                    psi_key = AllTSDataList[-2].JA_tok[current_layer]
-                    psi_value = AllTSDataList[-2].JA_tov[current_layer]
-
-                    # print(f"Reuse JA toqkv in TS {current_timestep} layer {current_layer}")
-                elif attention_type == 'DualAttention':
-                    psi_query = AllTSDataList[-2].DA_toq[current_layer]
-                    psi_key = AllTSDataList[-2].DA_tok[current_layer]
-                    psi_value = AllTSDataList[-2].DA_tov[current_layer]
-                    # print(f"Reuse DA toqkv in TS {current_timestep} layer {current_layer}")
-                # query = (query + psi_query) / 2
-                # key = (key + psi_key) / 2
-                # value = (value + psi_value) / 2
-
-                query = torch.where(full_mask, query, psi_query)
-                key = torch.where(full_mask, key, psi_key)
-                value = torch.where(full_mask, value, psi_value)
-                # new_query = (query + psi_query) / 2
-                # new_key = (key + psi_key) / 2
-                # new_value = (value + psi_value) / 2
-                # query = torch.where(full_mask, new_query, psi_query)
-                # key = torch.where(full_mask, new_key, psi_key)
-                # value = torch.where(full_mask, new_value, psi_value)
-
-
-        # save data here.
-        # import pdb
-        # pdb.set_trace()
-        if ENABLE_TIMESTEP_SKIPPING and current_timestep < GLOBAL_TIMESTEP_SKIP_STATE['skip_steps'][1]:
-            if attention_type == 'JointAttention':
-                GLOBAL_TIMESTEP_DATA.append('JA_toq', query)
-                GLOBAL_TIMESTEP_DATA.append('JA_tok', key)
-                GLOBAL_TIMESTEP_DATA.append('JA_tov', value)
-            elif attention_type == 'DualAttention':
-                GLOBAL_TIMESTEP_DATA.append('DA_toq', query)
-                GLOBAL_TIMESTEP_DATA.append('DA_tok', key)
-                GLOBAL_TIMESTEP_DATA.append('DA_tov', value)
 
         inner_dim = key.shape[-1]
         head_dim = inner_dim // attn.heads
@@ -1565,74 +1450,16 @@ class JointAttnProcessor2_0:
         value = value.view(batch_size, -1, attn.heads, head_dim).transpose(1, 2)
 
         if attn.norm_q is not None:
-            # if getattr(attn, 'print_inference_data', False):
-            #     print(f"    [NORM] norm_q - Input: {query.shape}, Weight: {attn.norm_q.weight.shape if hasattr(attn.norm_q, 'weight') else 'No weight'}")
             query = attn.norm_q(query)
-            # if getattr(attn, 'print_inference_data', False):
-            #     print(f"    [NORM] norm_q - Output: {query.shape}")
         if attn.norm_k is not None:
-            # if getattr(attn, 'print_inference_data', False):
-            #     print(f"    [NORM] norm_k - Input: {key.shape}, Weight: {attn.norm_k.weight.shape if hasattr(attn.norm_k, 'weight') else 'No weight'}")
             key = attn.norm_k(key)
-            # if getattr(attn, 'print_inference_data', False):
-            #     print(f"    [NORM] norm_k - Output: {key.shape}")
 
         # `context` projections.
         if encoder_hidden_states is not None:
             # 将文本表示投影到图像注意力空间
-            # if getattr(attn, 'print_inference_data', False):
-            #     print(f"    [LINEAR] add_q_proj - Input: {encoder_hidden_states.shape}, Weight: {attn.add_q_proj.weight.shape}, Bias: {attn.add_q_proj.bias.shape if attn.add_q_proj.bias is not None else None}")
             encoder_hidden_states_query_proj = attn.add_q_proj(encoder_hidden_states)
-            # if getattr(attn, 'print_inference_data', False):
-            #     print(f"    [LINEAR] add_q_proj - Output: {encoder_hidden_states_query_proj.shape}")
-            
-            # if getattr(attn, 'print_inference_data', False):
-            #     print(f"    [LINEAR] add_k_proj - Input: {encoder_hidden_states.shape}, Weight: {attn.add_k_proj.weight.shape}, Bias: {attn.add_k_proj.bias.shape if attn.add_k_proj.bias is not None else None}")
             encoder_hidden_states_key_proj = attn.add_k_proj(encoder_hidden_states)
-            # if getattr(attn, 'print_inference_data', False):
-            #     print(f"    [LINEAR] add_k_proj - Output: {encoder_hidden_states_key_proj.shape}")
-            
-            # if getattr(attn, 'print_inference_data', False):
-            #     print(f"    [LINEAR] add_v_proj - Input: {encoder_hidden_states.shape}, Weight: {attn.add_v_proj.weight.shape}, Bias: {attn.add_v_proj.bias.shape if attn.add_v_proj.bias is not None else None}")
             encoder_hidden_states_value_proj = attn.add_v_proj(encoder_hidden_states)
-            # if getattr(attn, 'print_inference_data', False):
-            #     print(f"    [LINEAR] add_v_proj - Output: {encoder_hidden_states_value_proj.shape}")
-            # =============================
-            if ENABLE_TIMESTEP_SKIPPING and GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep] != 0:
-                mask_num = current_layer // LOOP_Layer
-                
-                full_context_mask = torch.zeros(333, dtype=torch.bool, device=query.device)
-                if ENABLE_MASK:
-                    context_mask = GLOBAL_TIMESTEP_SKIP_STATE['context_mask_cache'][mask_num] # context mask
-                    full_context_mask[context_mask] = Context_MASK #True
-                full_context_mask = full_context_mask.unsqueeze(0).unsqueeze(-1)  # [1, 333, 1]
-
-                if GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep] == 1:
-                    
-                    psi_query = 2*AllTSDataList[-1].JA_toq_context[current_layer]-AllTSDataList[-2].JA_toq_context[current_layer]
-                    psi_key = 2*AllTSDataList[-1].JA_tok_context[current_layer]-AllTSDataList[-2].JA_tok_context[current_layer]
-                    psi_value = 2*AllTSDataList[-1].JA_tov_context[current_layer]-AllTSDataList[-2].JA_tov_context[current_layer]
-                    # print(f"PSI JA toqkv in TS {current_timestep} layer {current_layer}")
-                    encoder_hidden_states_query_proj = torch.where(full_context_mask, encoder_hidden_states_query_proj, psi_query)    
-                    encoder_hidden_states_key_proj = torch.where(full_context_mask, encoder_hidden_states_key_proj, psi_key)
-                    encoder_hidden_states_value_proj = torch.where(full_context_mask, encoder_hidden_states_value_proj, psi_value)
-
-                elif GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep] == 2: # reuse
-
-                    psi_query = AllTSDataList[-2].JA_toq_context[current_layer]
-                    psi_key = AllTSDataList[-2].JA_tok_context[current_layer]
-                    psi_value = AllTSDataList[-2].JA_tov_context[current_layer]
-
-                    encoder_hidden_states_query_proj = torch.where(full_context_mask, encoder_hidden_states_query_proj, psi_query)
-                    encoder_hidden_states_key_proj = torch.where(full_context_mask, encoder_hidden_states_key_proj, psi_key)
-                    encoder_hidden_states_value_proj = torch.where(full_context_mask, encoder_hidden_states_value_proj, psi_value)
-
-
-            if ENABLE_TIMESTEP_SKIPPING and current_timestep < GLOBAL_TIMESTEP_SKIP_STATE['skip_steps'][1]:
-                GLOBAL_TIMESTEP_DATA.append('JA_toq_context', encoder_hidden_states_query_proj)
-                GLOBAL_TIMESTEP_DATA.append('JA_tok_context', encoder_hidden_states_key_proj)
-                GLOBAL_TIMESTEP_DATA.append('JA_tov_context', encoder_hidden_states_value_proj)
-            # =============================
 
             encoder_hidden_states_query_proj = encoder_hidden_states_query_proj.view(
                 batch_size, -1, attn.heads, head_dim
@@ -1645,76 +1472,15 @@ class JointAttnProcessor2_0:
             ).transpose(1, 2)
 
             if attn.norm_added_q is not None:
-                # if getattr(attn, 'print_inference_data', False):
-                #     print(f"    [NORM] norm_added_q - Input: {encoder_hidden_states_query_proj.shape}, Weight: {attn.norm_added_q.weight.shape if hasattr(attn.norm_added_q, 'weight') else 'No weight'}")
                 encoder_hidden_states_query_proj = attn.norm_added_q(encoder_hidden_states_query_proj)
-                # if getattr(attn, 'print_inference_data', False):
-                #     print(f"    [NORM] norm_added_q - Output: {encoder_hidden_states_query_proj.shape}")
             if attn.norm_added_k is not None:
-                # if getattr(attn, 'print_inference_data', False):
-                #     print(f"    [NORM] norm_added_k - Input: {encoder_hidden_states_key_proj.shape}, Weight: {attn.norm_added_k.weight.shape if hasattr(attn.norm_added_k, 'weight') else 'No weight'}")
                 encoder_hidden_states_key_proj = attn.norm_added_k(encoder_hidden_states_key_proj)
-                # if getattr(attn, 'print_inference_data', False):
-                #     print(f"    [NORM] norm_added_k - Output: {encoder_hidden_states_key_proj.shape}")
             # 将文本表示投影到图像注意力空间
             query = torch.cat([query, encoder_hidden_states_query_proj], dim=2)
             key = torch.cat([key, encoder_hidden_states_key_proj], dim=2)
             value = torch.cat([value, encoder_hidden_states_value_proj], dim=2)
-            
         # 在拼接后的 QKV 上计算注意力
-        # if getattr(attn, 'print_inference_data', False):
-        #     print(f"    [ATTN] scaled_dot_product_attention - Input Q: {query.shape}, K: {key.shape}, V: {value.shape}")
-        #     print(f"    [ATTN] Attention计算过程:")
-        #     print(f"      - QK^T: {query.shape} @ {key.transpose(-2, -1).shape} = {torch.matmul(query, key.transpose(-2, -1)).shape}")
-        
-        # 手动计算softmax输入输出用于保存
-        qk_t = torch.matmul(query, key.transpose(-2, -1))
-        # if getattr(attn, 'print_inference_data', False):
-        #     print(f"      - Softmax输入: {qk_t.shape}")
-    
-        
-        # 调试信息
-        if getattr(attn, 'print_inference_data', False):
-            print(f"      [DEBUG] Softmax保存条件检查:")
-            print(f"        - current_timestep: {current_timestep}")
-            print(f"        - current_layer: {current_layer}")
-            print(f"        - attention_type: {attention_type}")
-            print(f"        - save_inference_data: {save_inference_data}")
-            print(f"        - 条件满足: {save_inference_data and current_timestep is not None and current_layer is not None and current_timestep < 30 and current_layer < 30}")
-        
-        if (save_inference_data and current_timestep is not None and current_layer is not None and 
-            current_timestep < 3 and current_layer < 3):
-            
-            # 创建保存目录
-            save_dir = f"/home/yf184/diffusers/StableDiffusion/data/Timestep_{current_timestep}/Layer_{current_layer}"
-            os.makedirs(save_dir, exist_ok=True)
-            
-            # 根据attention类型保存不同的文件
-            if attention_type == 'JointAttention':
-                # 保存JointAttention的softmax输入输出
-                torch.save(qk_t, os.path.join(save_dir, "joint_softmax_input.pt"))
-                if getattr(attn, 'print_inference_data', False):
-                    print(f"      - 保存JointAttention Softmax输入: {qk_t.shape}")
-                
-                softmax_output = F.softmax(qk_t, dim=-1)
-                torch.save(softmax_output, os.path.join(save_dir, "joint_softmax_output.pt"))
-                if getattr(attn, 'print_inference_data', False):
-                    print(f"      - 保存JointAttention Softmax输出: {softmax_output.shape}")
-            elif attention_type == 'DualAttention':
-                # 保存DualAttention的softmax输入输出
-                torch.save(qk_t, os.path.join(save_dir, "dual_softmax_input.pt"))
-                if getattr(attn, 'print_inference_data', False):
-                    print(f"      - 保存DualAttention Softmax输入: {qk_t.shape}")
-                
-                softmax_output = F.softmax(qk_t, dim=-1)
-                torch.save(softmax_output, os.path.join(save_dir, "dual_softmax_output.pt"))
-                if getattr(attn, 'print_inference_data', False):
-                    print(f"      - 保存DualAttention Softmax输出: {softmax_output.shape}")
-        
         hidden_states = F.scaled_dot_product_attention(query, key, value, dropout_p=0.0, is_causal=False)
-        if getattr(attn, 'print_inference_data', False):
-            print(f"    [ATTN] scaled_dot_product_attention - Output: {hidden_states.shape}")
-        
         hidden_states = hidden_states.transpose(1, 2).reshape(batch_size, -1, attn.heads * head_dim)
         hidden_states = hidden_states.to(query.dtype)
 
@@ -1725,18 +1491,10 @@ class JointAttnProcessor2_0:
                 hidden_states[:, residual.shape[1] :], # text features
             )
             if not attn.context_pre_only:
-                # if getattr(attn, 'print_inference_data', False):
-                #     print(f"    [LINEAR] to_add_out - Input: {encoder_hidden_states.shape}, Weight: {attn.to_add_out.weight.shape}, Bias: {attn.to_add_out.bias.shape if attn.to_add_out.bias is not None else None}")
                 encoder_hidden_states = attn.to_add_out(encoder_hidden_states)
-                # if getattr(attn, 'print_inference_data', False):
-                #     print(f"    [LINEAR] to_add_out - Output: {encoder_hidden_states.shape}")
 
         # linear proj
-        # if getattr(attn, 'print_inference_data', False):
-            # print(f"    [LINEAR] to_out[0] - Input: {hidden_states.shape}, Weight: {attn.to_out[0].weight.shape}, Bias: {attn.to_out[0].bias.shape if attn.to_out[0].bias is not None else None}")
         hidden_states = attn.to_out[0](hidden_states)
-        # if getattr(attn, 'print_inference_data', False):
-        #     print(f"    [LINEAR] to_out[0] - Output: {hidden_states.shape}")
         # dropout
         hidden_states = attn.to_out[1](hidden_states)
 
@@ -4130,7 +3888,7 @@ class CustomDiffusionXFormersAttnProcessor(nn.Module):
 
 class CustomDiffusionAttnProcessor2_0(nn.Module):
     r"""
-    Processor for implementing attention for the Custom Diffusion method using PyTorch 2.0's memory-efficient scaled
+    Processor for implementing attention for the Custom Diffusion method using PyTorch 2.0’s memory-efficient scaled
     dot-product attention.
 
     Args:

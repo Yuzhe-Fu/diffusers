@@ -677,56 +677,38 @@ class JointTransformerBlock(nn.Module):
     ):
         joint_attention_kwargs = joint_attention_kwargs or {}
 
-        #print(f"=== JointTransformerBlock Start ===")
+
+        print(f"One JointTransformerBlock, Use dual attention: {self.use_dual_attention}")
+        # print(f"    hidden_states: {hidden_states.shape}")
+        # print(f"    encoder_hidden_states: {encoder_hidden_states.shape}")
+        # print(f"    temb: {temb.shape}")
 
         # 对于图像路径 (hidden_states)
         if self.use_dual_attention:
             # 双流注意力：返回两组归一化结果
-            #print(f"  [NORM] norm1 (SD35AdaLayerNormZeroX) - Input: {hidden_states.shape}, Temb: {temb.shape}")
             norm_hidden_states, gate_msa, shift_mlp, scale_mlp, gate_mlp, norm_hidden_states2, gate_msa2 = self.norm1(
                 hidden_states, emb=temb
             )
-                # print(f"  [NORM] norm1 (SD35AdaLayerNormZeroX) - Output: {norm_hidden_states.shape}")
-                # print(f"  [NORM] norm1 (SD35AdaLayerNormZeroX) - Gate/Shift/Scale shapes: {gate_msa.shape}, {shift_mlp.shape}, {scale_mlp.shape}, {gate_mlp.shape}")
         else:
             # 单流注意力：返回一组归一化结果
-                # print(f"  [NORM] norm1 (AdaLayerNormZero) - Input: {hidden_states.shape}, Temb: {temb.shape}")
             norm_hidden_states, gate_msa, shift_mlp, scale_mlp, gate_mlp = self.norm1(hidden_states, emb=temb)
-                # print(f"  [NORM] norm1 (AdaLayerNormZero) - Output: {norm_hidden_states.shape}")
-                # print(f"  [NORM] norm1 (AdaLayerNormZero) - Gate/Shift/Scale shapes: {gate_msa.shape}, {shift_mlp.shape}, {scale_mlp.shape}, {gate_mlp.shape}")
 
         # 对于文本路径 (encoder_hidden_states)，使用单注意力
         if self.context_pre_only:
             # 最后一层，只做归一化，不返回门控参数
-                # print(f"  [NORM] norm1_context (AdaLayerNormContinuous) - Input: {encoder_hidden_states.shape}, Temb: {temb.shape}")
             norm_encoder_hidden_states = self.norm1_context(encoder_hidden_states, temb)
-                # print(f"  [NORM] norm1_context (AdaLayerNormContinuous) - Output: {norm_encoder_hidden_states.shape}")
         else:
             # 其他层，使用门控参数
-                # print(f"  [NORM] norm1_context (AdaLayerNormZero) - Input: {encoder_hidden_states.shape}, Temb: {temb.shape}")
             norm_encoder_hidden_states, c_gate_msa, c_shift_mlp, c_scale_mlp, c_gate_mlp = self.norm1_context(
                 encoder_hidden_states, emb=temb
             )
-                # print(f"  [NORM] norm1_context (AdaLayerNormZero) - Output: {norm_encoder_hidden_states.shape}")
-                # print(f"  [NORM] norm1_context (AdaLayerNormZero) - Gate/Shift/Scale shapes: {c_gate_msa.shape}, {c_shift_mlp.shape}, {c_scale_mlp.shape}, {c_gate_mlp.shape}")
 
         # Attention. 调用联合注意力
-            # print(f"  [ATTN] JointAttention Start")
-        # 设置JointAttention的类型和保存标志
-        if self.attn is not None:
-            self.attn._attention_type = 'JointAttention'
-            self.attn.save_inference_data = getattr(self, 'save_inference_data', False)
-            self.attn.print_inference_data = getattr(self, 'print_inference_data', False)
-            self.attn._current_timestep_index = getattr(self, '_current_timestep_index', None)
-            self.attn._current_layer_index = getattr(self, '_current_layer_index', None)
-        
         attn_output, context_attn_output = self.attn(
             hidden_states=norm_hidden_states,
             encoder_hidden_states=norm_encoder_hidden_states,
             **joint_attention_kwargs,
         )
-
-        # print(f"  [ATTN] JointAttention End - Output: {attn_output.shape}")
 
         # 应用门控到注意力输出
         attn_output = gate_msa.unsqueeze(1) * attn_output
@@ -734,39 +716,17 @@ class JointTransformerBlock(nn.Module):
 
         # 双流注意力（SD3.5 特有）
         if self.use_dual_attention:
-            # print(f"  [ATTN] DualAttention Start")
-            # 设置DualAttention的类型和保存标志
-            if self.attn2 is not None:
-                self.attn2._attention_type = 'DualAttention'
-                self.attn2.save_inference_data = getattr(self, 'save_inference_data', False)
-                self.attn2.print_inference_data = getattr(self, 'print_inference_data', False)
-                self.attn2._current_timestep_index = getattr(self, '_current_timestep_index', None)
-                self.attn2._current_layer_index = getattr(self, '_current_layer_index', None)
-            
-            # 调试信息
-                # print(f"  [DEBUG] DualAttention设置:")
-                # print(f"    - self._current_timestep_index: {getattr(self, '_current_timestep_index', None)}")
-                # print(f"    - self._current_layer_index: {getattr(self, '_current_layer_index', None)}")
-                # print(f"    - attn2._current_timestep_index: {self.attn2._current_timestep_index}")
-                # print(f"    - attn2._current_layer_index: {self.attn2._current_layer_index}")
             attn_output2 = self.attn2(hidden_states=norm_hidden_states2, **joint_attention_kwargs)
-                # print(f"  [ATTN] DualAttention End - Output: {attn_output2.shape}")
             attn_output2 = gate_msa2.unsqueeze(1) * attn_output2
             hidden_states = hidden_states + attn_output2
-            
         # MLP 处理
-        
         norm_hidden_states = self.norm2(hidden_states)
-        #     print(f"  [NORM] norm2 (LayerNorm) - Input: {hidden_states.shape},Output: {norm_hidden_states.shape}")
-        
         norm_hidden_states = norm_hidden_states * (1 + scale_mlp[:, None]) + shift_mlp[:, None]
         if self._chunk_size is not None:
             # "feed_forward_chunk_size" can be used to save memory
             ff_output = _chunked_feed_forward(self.ff, norm_hidden_states, self._chunk_dim, self._chunk_size)
-            #     print(f"  [MLP] ff (FeedForward) - Input: {norm_hidden_states.shape}, Output: {ff_output.shape}")
         else:
             ff_output = self.ff(norm_hidden_states)
-                # print(f"  [MLP] ff (FeedForward) - Input: {norm_hidden_states.shape}, Output: {ff_output.shape}")
         ff_output = gate_mlp.unsqueeze(1) * ff_output
 
         hidden_states = hidden_states + ff_output
@@ -781,21 +741,16 @@ class JointTransformerBlock(nn.Module):
             encoder_hidden_states = encoder_hidden_states + context_attn_output
             # MLP 处理
             norm_encoder_hidden_states = self.norm2_context(encoder_hidden_states)
-            #     print(f"  [NORM] norm2_context (LayerNorm) - Input: {encoder_hidden_states.shape}, Output: {norm_encoder_hidden_states.shape}")
             norm_encoder_hidden_states = norm_encoder_hidden_states * (1 + c_scale_mlp[:, None]) + c_shift_mlp[:, None]
             if self._chunk_size is not None:
                 # "feed_forward_chunk_size" can be used to save memory
                 context_ff_output = _chunked_feed_forward(
                     self.ff_context, norm_encoder_hidden_states, self._chunk_dim, self._chunk_size
                 )
-                #     print(f"  [MLP] ff_context (FeedForward) - Input: {norm_encoder_hidden_states.shape} - Output: {context_ff_output.shape}")
             else:
                 context_ff_output = self.ff_context(norm_encoder_hidden_states)
-                    # print(f"  [MLP] ff_context (FeedForward) - Input: {norm_encoder_hidden_states.shape} - Output: {context_ff_output.shape}")
             encoder_hidden_states = encoder_hidden_states + c_gate_mlp.unsqueeze(1) * context_ff_output
 
-            # print(f"=== JointTransformerBlock End ===")
-            
         return encoder_hidden_states, hidden_states
 
 
@@ -1788,42 +1743,6 @@ class FeedForward(nn.Module):
         if len(args) > 0 or kwargs.get("scale", None) is not None:
             deprecation_message = "The `scale` argument is deprecated and will be ignored. Please remove it, as passing it will raise an error in the future. `scale` should directly be passed while calling the underlying pipeline component i.e., via `cross_attention_kwargs`."
             deprecate("scale", "1.0.0", deprecation_message)
-        
-        for i, module in enumerate(self.net):
-            if isinstance(module, nn.Linear):
-                if getattr(self, 'print_inference_data', False):
-                    print(f"      [LINEAR] net[{i}] - Input: {hidden_states.shape}, Weight: {module.weight.shape}, Bias: {module.bias.shape if module.bias is not None else None}")
-                hidden_states = module(hidden_states)
-                if getattr(self, 'print_inference_data', False):
-                    print(f"      [LINEAR] net[{i}] - Output: {hidden_states.shape}")
-            elif hasattr(module, 'proj') and hasattr(module, 'gelu'):  # GELU类
-                if getattr(self, 'print_inference_data', False):
-                    print(f"      [LINEAR] net[{i}].proj - Input: {hidden_states.shape}, Weight: {module.proj.weight.shape}, Bias: {module.proj.bias.shape if module.proj.bias is not None else None}")
-                hidden_states = module.proj(hidden_states)
-                if getattr(self, 'print_inference_data', False):
-                    print(f"      [LINEAR] net[{i}].proj - Output: {hidden_states.shape}")
-                    print(f"      [ACTIVATION] net[{i}].gelu - Input: {hidden_states.shape}")
-                hidden_states = module.gelu(hidden_states)
-                if getattr(self, 'print_inference_data', False):
-                    print(f"      [ACTIVATION] net[{i}].gelu - Output: {hidden_states.shape}")
-            elif hasattr(module, 'proj1') and hasattr(module, 'proj2'):  # GEGLU类
-                if getattr(self, 'print_inference_data', False):
-                    print(f"      [LINEAR] net[{i}].proj1 - Input: {hidden_states.shape}, Weight: {module.proj1.weight.shape}, Bias: {module.proj1.bias.shape if module.proj1.bias is not None else None}")
-                hidden_states = module.proj1(hidden_states)
-                if getattr(self, 'print_inference_data', False):
-                    print(f"      [LINEAR] net[{i}].proj1 - Output: {hidden_states.shape}")
-                    print(f"      [ACTIVATION] net[{i}].gelu - Input: {hidden_states.shape}")
-                hidden_states = module.gelu(hidden_states)
-                if getattr(self, 'print_inference_data', False):
-                    print(f"      [ACTIVATION] net[{i}].gelu - Output: {hidden_states.shape}")
-                    print(f"      [LINEAR] net[{i}].proj2 - Input: {hidden_states.shape}, Weight: {module.proj2.weight.shape}, Bias: {module.proj2.bias.shape if module.proj2.bias is not None else None}")
-                hidden_states = module.proj2(hidden_states)
-                if getattr(self, 'print_inference_data', False):
-                    print(f"      [LINEAR] net[{i}].proj2 - Output: {hidden_states.shape}")
-            else:
-                if getattr(self, 'print_inference_data', False):
-                    print(f"      [OTHER] net[{i}] ({module.__class__.__name__}) - Input: {hidden_states.shape}")
-                hidden_states = module(hidden_states)
-                if getattr(self, 'print_inference_data', False):
-                    print(f"      [OTHER] net[{i}] ({module.__class__.__name__}) - Output: {hidden_states.shape}")
+        for module in self.net:
+            hidden_states = module(hidden_states)
         return hidden_states
