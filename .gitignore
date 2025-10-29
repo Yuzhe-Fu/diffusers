@@ -186,3 +186,22 @@ tags
 
 # wandb
 wandb
+
+# all dataset directories
+*/dataset
+*/eval/dataset
+#all npz files
+*.npz
+*.csv
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.tiff
+*.ico
+*.webp
+*.svg
+*.eps
+*.pdf
+*.docx

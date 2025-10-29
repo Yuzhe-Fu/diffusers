@@ -4,6 +4,7 @@
 # 2. Calculate difference values between adjacent layers and generate mask matrix
 # 3. In subsequent steps: Use mask matrix to selectively quantize JointTransformerBlock inputs
 
+import imp
 import torch
 from diffusers import BitsAndBytesConfig as DiffusersBitsAndBytesConfig, SD3Transformer2DModel, StableDiffusion3Pipeline
 from transformers import BitsAndBytesConfig as BitsAndBytesConfig, CLIPTextModelWithProjection
@@ -143,6 +144,34 @@ def setup_model_and_pipeline():
     pipeline.enable_model_cpu_offload()
     
     return pipeline
+
+def setup_model_and_pipeline_no_quant():
+    """Setup model and pipeline without quantization for evaluation"""
+    # Setup text encoder without quantization
+    text_encoder = CLIPTextModelWithProjection.from_pretrained(
+        "stabilityai/stable-diffusion-3.5-medium",
+        subfolder="text_encoder",
+        torch_dtype=torch.float16,
+    )
+
+    # Setup transformer without quantization
+    transformer = SD3Transformer2DModel.from_pretrained(
+        "stabilityai/stable-diffusion-3.5-medium",
+        subfolder="transformer",
+        torch_dtype=torch.float16,
+    )
+
+    # Create pipeline
+    pipeline = StableDiffusion3Pipeline.from_pretrained(
+        "stabilityai/stable-diffusion-3.5-medium",
+        text_encoder=text_encoder,
+        transformer=transformer,
+        torch_dtype=torch.float16,
+    )
+    pipeline.enable_model_cpu_offload()
+    
+    return pipeline
+
 
 def setup_scheduler_callback(pipeline):
     """Setup custom scheduler callback to track timesteps"""
@@ -327,20 +356,23 @@ def get_differential_mask(step_index):
     return mask
 
 
-# 帮我在这个文件里新建一个类，应该是个字典，用来存一个timestep内网络中特定层的pt数据，结构差不多长这样：
-# {'JA-toq': [], 'JA-tok': [], 'JA-tov': [], 'DA-toq': [], 'DA-tok': [], 'DA-tov': [], 'end': []}
+# 这里能控制网络里对哪些计算层进行优化，目前就是toqkv以及Attention里的lienarout以及后续的MLP
+# 注释掉这里面的层可以控制对哪些层进行优化（同时还需要把库代码里的对应代码也注释掉）
+DATA_TYPE_NAMES = [
+    'JA_toq', 'JA_tok', 'JA_tov', #'JA_sv',
+    'JA_toq_context', 'JA_tok_context', 'JA_tov_context',
+    'DA_toq', 'DA_tok', 'DA_tov', #'DA_sv',
+    'JA_out', 'DA_out', # the output linear of attention
+    'MLP_up_out', 'MLP_down_out',
+    # 'MLP_up_out_context', 'MLP_down_out_context',
+    # 'Layer_out', 
+    # 'Layer_out_context'
+]
+
 class TimestepData:
     def __init__(self):
-        # Store lists for each layer type
-        self.JA_toq = []
-        self.JA_tok = []
-        self.JA_tov = []
-        self.JA_toq_context = []
-        self.JA_tok_context = []
-        self.JA_tov_context = []
-        self.DA_toq = []
-        self.DA_tok = []
-        self.DA_tov = []
+        for data_type in DATA_TYPE_NAMES:
+            setattr(self, data_type, [])
         self.end = []
         self.end_context = []
 
@@ -375,7 +407,7 @@ def cache_GLOBAL_TIMESTEP_DATA(data):
         AllTSDataList.pop(0)
     GLOBAL_TIMESTEP_DATA = TimestepData()
 
-def update_mask_inTS(top_k):
+def update_mask_inTS_based_on_end_data(top_k):
     # clean the mask cache
     GLOBAL_TIMESTEP_SKIP_STATE['mask_cache'] = []
     GLOBAL_TIMESTEP_SKIP_STATE['context_mask_cache'] = []
@@ -397,7 +429,6 @@ def update_mask_inTS(top_k):
         topk_num = max(1, int(top_k * meanabs_1d.numel())) 
         topk_indices = torch.topk(meanabs_1d, topk_num).indices
         GLOBAL_TIMESTEP_SKIP_STATE['context_mask_cache'].append(topk_indices)
-
 
 
 def update_Diffmask_inTS(top_k, current_TS):
@@ -440,3 +471,248 @@ def update_Diffmask_inTS(top_k, current_TS):
             topk_num = max(1, int(top_k * meanabs_1d.numel())) 
             topk_indices = torch.topk(meanabs_1d, topk_num).indices
             GLOBAL_TIMESTEP_SKIP_STATE['context_mask_cache'].append(topk_indices)
+
+
+def detect_outliers_zscore_layer_adaptive(data, layer_id, top_k,total_layers=24):
+    """
+    使用分层Z-Score方法检测outliers
+    根据层深度调整阈值，确保每层都有合理的token选择
+    """
+    # 计算Z-Score
+    mean = data.mean(dim=-1, keepdim=True)
+    std = data.std(dim=-1, keepdim=True)
+    z_scores = torch.abs((data - mean) / (std + 1e-8))
+    
+    # 计算每个token的最大Z-Score
+    max_z_scores = z_scores.max(dim=-1)[0]  # [batch, seq_len]
+    
+    # 根据层深度调整阈值策略
+    if layer_id < total_layers // 3:  # 浅层 (0-9)
+        # 使用更宽松的阈值，选择更多outliers
+        threshold_percentile = top_k  
+    elif layer_id < 2 * total_layers // 3:  # 中层 (10-19)
+        # 使用中等阈值
+        threshold_percentile = top_k
+    else:  # 深层 (20-27)
+        # 使用更严格的阈值，选择更少outliers
+        threshold_percentile = top_k
+    
+    # 根据百分位数计算阈值
+    # 确保张量是float类型，因为torch.quantile()要求float或double类型
+    max_z_scores_flat = max_z_scores.flatten().float()
+    threshold = torch.quantile(max_z_scores_flat, threshold_percentile)
+    
+    # 创建outlier mask
+    outlier_mask = max_z_scores > threshold
+    
+    return max_z_scores, outlier_mask, threshold, threshold_percentile
+
+
+def update_mask_inTS_for_all_data_types_zscore(top_k=None, use_zscore=True, enable_hidden_dim_outlier=False):
+    """
+    基于分层Z-Score方法为TimestepData中每个name生成各自的mask
+    并将mask以TimestepData的形式存储在GLOBAL_TIMESTEP_SKIP_STATE的'mask_cache'中
+    
+    Args:
+        top_k: 保留的token比例（当use_zscore=False时使用）
+        use_zscore: 是否使用Z-Score方法，否则使用原来的top-k方法
+        enable_hidden_dim_outlier: 是否同时在hidden_dim维度上检测outlier
+    """
+    global AllTSDataList, GLOBAL_TIMESTEP_SKIP_STATE
+    
+    # 清理旧的mask cache
+    GLOBAL_TIMESTEP_SKIP_STATE['mask_cache'] = TimestepData()
+    
+    LastTSData = AllTSDataList[-1]
+    # 为每个数据类型生成mask
+    for data_type in DATA_TYPE_NAMES:
+        # 为每个layer生成mask
+        for layer_id in GLOBAL_GETMASK_LAYER:
+            # import pdb; pdb.set_trace()
+            # pdb.set_trace()
+            # 获取该数据类型在指定层的数据
+            if hasattr(LastTSData, data_type) and len(getattr(LastTSData, data_type)) > layer_id:
+                data = getattr(LastTSData, data_type)[layer_id]
+                
+                if len(data.shape) >= 2:  # 确保数据有足够的维度
+                    if use_zscore:
+                        # 使用分层Z-Score方法
+                        outlier_scores, outlier_mask, threshold, percentile = detect_outliers_zscore_layer_adaptive(
+                            data, layer_id, (1-top_k)
+                        )
+                        keep_indices = torch.where(outlier_mask[0])[0]
+                        # print(keep_indices)
+                    else:
+                        # 使用原来的top-k方法
+                        meanabs_1d = data[0].abs().mean(dim=1) if len(data.shape) > 2 else data.abs().mean(dim=1)
+                        
+                        if top_k == 0:
+                            keep_indices = torch.tensor([], dtype=torch.long, device=meanabs_1d.device)
+                            keep_indices_hidden = torch.tensor([], dtype=torch.long, device=meanabs_1d.device)
+                        else:
+                            # Token维度的outlier检测
+                            try:
+                                topk_num = max(1, int(top_k * meanabs_1d.numel()))
+                                keep_indices = torch.topk(meanabs_1d, topk_num, largest=False).indices
+                            except Exception as e:
+                                print(f"Error in topk: {e}")
+                                import pdb; pdb.set_trace()
+                            
+                            # Hidden维度的outlier检测（如果启用）
+                            if enable_hidden_dim_outlier and len(data.shape) > 2 and top_k > 0:
+                                # 在hidden_dim维度上计算mean absolute value
+                                meanabs_hidden = data[0].abs().mean(dim=0)  # [hidden_dim]
+                                topk_num_hidden = max(1, int(top_k * meanabs_hidden.numel()))
+                                keep_indices_hidden = torch.topk(meanabs_hidden, topk_num_hidden, largest=False).indices
+                            else:
+                                keep_indices_hidden = torch.tensor([], dtype=torch.long, device=meanabs_1d.device)
+                    
+                    # 将mask添加到对应数据类型的列表中
+                    if enable_hidden_dim_outlier and len(keep_indices_hidden) > 0:
+                        # 存储[keep_indices, keep_indices_hidden]格式
+                        mask_data = [keep_indices, keep_indices_hidden]
+                    else:
+                        # 只存储keep_indices
+                        mask_data = keep_indices
+                    
+                    getattr(GLOBAL_TIMESTEP_SKIP_STATE['mask_cache'], data_type).append(mask_data)
+                else:
+                    # 如果数据维度不够，创建空mask
+                    print(f"Data type {data_type} has insufficient dimensions for layer {layer_id}")
+                    getattr(GLOBAL_TIMESTEP_SKIP_STATE['mask_cache'], data_type).append(torch.tensor([], dtype=torch.long))
+            else:
+                # 如果数据不存在，创建空mask
+                if layer_id < 13 and not 'DA' in data_type:
+                    print(f"Data type {data_type} has no data for layer {layer_id}")
+                    getattr(GLOBAL_TIMESTEP_SKIP_STATE['mask_cache'], data_type).append(torch.tensor([], dtype=torch.long))
+
+def update_mask_inTS_for_all_data_types_diffvalue(top_k=None, use_zscore=True, enable_hidden_dim_outlier=False):
+    """
+    基于分层Z-Score方法为TimestepData中每个name生成各自的mask
+    并将mask以TimestepData的形式存储在GLOBAL_TIMESTEP_SKIP_STATE的'mask_cache'中
+    
+    Args:
+        top_k: 保留的token比例（当use_zscore=False时使用）
+        use_zscore: 是否使用Z-Score方法，否则使用原来的top-k方法
+        enable_hidden_dim_outlier: 是否同时在hidden_dim维度上检测outlier
+    """
+    global AllTSDataList, GLOBAL_TIMESTEP_SKIP_STATE
+    
+    # 清理旧的mask cache
+    GLOBAL_TIMESTEP_SKIP_STATE['mask_cache'] = TimestepData()
+    
+    ReuseTSData = AllTSDataList[-2]
+    LastTSData = AllTSDataList[-1]
+    # 为每个数据类型生成mask
+    for data_type in DATA_TYPE_NAMES:
+        for layer_id in GLOBAL_GETMASK_LAYER:
+            if hasattr(LastTSData, data_type) and len(getattr(LastTSData, data_type)) > layer_id:
+                data = getattr(LastTSData, data_type)[layer_id]
+                Reuse_data = getattr(ReuseTSData, data_type)[layer_id]
+                Diff_data = (data - Reuse_data)
+                if len(data.shape) >= 2:  # 确保数据有足够的维度
+                    if use_zscore:
+                        # 使用分层Z-Score方法
+                        outlier_scores, outlier_mask, threshold, percentile = detect_outliers_zscore_layer_adaptive(
+                            Diff_data, layer_id, (1-top_k)
+                        )
+                        keep_indices = torch.where(outlier_mask[0])[0]
+                        # print(keep_indices)
+                    else:
+                        # 使用原来的top-k方法
+                        meanabs_1d = Diff_data[0].abs().mean(dim=1) if len(Diff_data.shape) > 2 else Diff_data.abs().mean(dim=1)
+                        
+                        if top_k == 0:
+                            keep_indices = torch.tensor([], dtype=torch.long, device=meanabs_1d.device)
+                            keep_indices_hidden = torch.tensor([], dtype=torch.long, device=meanabs_1d.device)
+                        else:
+                            # Token维度的outlier检测
+                            try:
+                                topk_num = max(1, int(top_k * meanabs_1d.numel()))
+                                keep_indices = torch.topk(meanabs_1d, topk_num, largest=False).indices
+                            except Exception as e:
+                                print(f"Error in topk: {e}")
+                                import pdb; pdb.set_trace()
+
+                            # Hidden维度的outlier检测（如果启用）
+                            if enable_hidden_dim_outlier and len(Diff_data.shape) > 2 and top_k > 0:
+                                # 在hidden_dim维度上计算mean absolute value
+                                meanabs_hidden = Diff_data[0].abs().mean(dim=0)  # [hidden_dim]
+                                topk_num_hidden = max(1, int(top_k * meanabs_hidden.numel()))
+                                keep_indices_hidden = torch.topk(meanabs_hidden, topk_num_hidden, largest=False).indices
+                            else:
+                                keep_indices_hidden = torch.tensor([], dtype=torch.long, device=meanabs_1d.device)
+                    
+                    # 将mask添加到对应数据类型的列表中
+                    if enable_hidden_dim_outlier and len(keep_indices_hidden) > 0:
+                        # 存储[keep_indices, keep_indices_hidden]格式
+                        mask_data = [keep_indices, keep_indices_hidden]
+                    else:
+                        # 只存储keep_indices
+                        mask_data = keep_indices
+                    
+                    getattr(GLOBAL_TIMESTEP_SKIP_STATE['mask_cache'], data_type).append(mask_data)
+                else:
+                    # 如果数据维度不够，创建空mask
+                    print(f"Data type {data_type} has insufficient dimensions for layer {layer_id}")
+                    getattr(GLOBAL_TIMESTEP_SKIP_STATE['mask_cache'], data_type).append(torch.tensor([], dtype=torch.long))
+            else:
+                # 如果数据不存在，创建空mask
+                if layer_id < 13 and not 'DA' in data_type:
+                    print(f"Data type {data_type} has no data for layer {layer_id}")
+                    getattr(GLOBAL_TIMESTEP_SKIP_STATE['mask_cache'], data_type).append(torch.tensor([], dtype=torch.long))
+
+
+
+def EchoFlow_opti_with_stored_mask(current_tensor, data_type, mode, current_layer):
+    """
+    使用存储在TimestepData中的mask进行EchoFlow优化
+    
+    Args:
+        current_tensor: The current tensor to be optimized (query/key/value)
+        data_type: Type of data ('JA_toq', 'JA_tok', 'JA_tov', 'JA_toq_context', 'JA_tok_context', 'JA_tov_context', 
+                  'DA_toq', 'DA_tok', 'DA_tov')
+        mode: Optimization mode (1 for PSI interpolation, 2 for reuse)
+        current_layer: Current layer index
+    
+    Returns:
+        Optimized tensor
+    """
+    global GLOBAL_TIMESTEP_SKIP_STATE, AllTSDataList
+    
+    if mode == 1:  # PSI interpolation
+        psi_tensor = 2 * getattr(AllTSDataList[-1], data_type)[current_layer] - getattr(AllTSDataList[-2], data_type)[current_layer]
+    elif mode == 2:  # Reuse
+        psi_tensor = getattr(AllTSDataList[-2], data_type)[current_layer]
+    else:
+        raise ValueError(f"Invalid mode: {mode}. Must be 1 (PSI) or 2 (reuse)")
+    # import pdb; pdb.set_trace()
+    # 从TimestepData格式的mask_cache中获取mask
+    mask_cache = GLOBAL_TIMESTEP_SKIP_STATE['mask_cache']
+    if hasattr(mask_cache, data_type) and len(getattr(mask_cache, data_type)) > current_layer:
+        mask_data = getattr(mask_cache, data_type)[current_layer]
+        
+        # 检查mask_data的格式
+        if isinstance(mask_data, list) and len(mask_data) == 2:
+            # 新格式：[keep_indices, keep_indices_hidden]
+            keep_indices, keep_indices_hidden = mask_data
+        else:
+            # 旧格式：只有keep_indices
+            keep_indices = mask_data
+            keep_indices_hidden = torch.tensor([], dtype=torch.long, device=current_tensor.device)
+        
+        if len(keep_indices) > 0:
+            # 创建token维度的mask
+            full_mask = torch.zeros(current_tensor.shape[1], dtype=torch.bool, device=current_tensor.device)
+            full_mask[keep_indices] = True
+            full_mask = full_mask.unsqueeze(0).unsqueeze(-1)  # [1, seq_len, 1]
+            # 如果有hidden维度的mask，扩展到与current_tensor相同的尺寸
+            if len(keep_indices_hidden) > 0 and len(current_tensor.shape) > 2:
+                # 将mask扩展到[1, seq_len, hidden_dim]
+                full_mask = full_mask.expand(-1, -1, current_tensor.shape[-1]).clone()  # [1, seq_len, hidden_dim]
+                # 在hidden_dim维度上设置对应的位置为True
+                full_mask[:, :, keep_indices_hidden] = True
+
+            return torch.where(full_mask, current_tensor, psi_tensor)
+    
+    return psi_tensor

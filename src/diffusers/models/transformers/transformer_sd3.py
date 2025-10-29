@@ -362,9 +362,11 @@ class SD3Transformer2DModel(
             import os
             import logging
             sys.path.append('/home/yf184/diffusers/StableDiffusion')
-            from Diffusion_config import GLOBAL_TIMESTEP_SKIP_STATE, cache_GLOBAL_TIMESTEP_DATA,update_Diffmask_inTS, TOPK_RATIO, ENABLE_TIMESTEP_SKIPPING, ENABLE_MASK, cache_noise_pred, update_mask, GLOBAL_TIMESTEP_DATA, LOOP_Layer, AllTSDataList, update_mask_inTS
+            from Diffusion_config import GLOBAL_TIMESTEP_SKIP_STATE, cache_GLOBAL_TIMESTEP_DATA,update_mask_inTS_for_all_data_types_zscore,EchoFlow_opti_with_stored_mask, TOPK_RATIO, ENABLE_TIMESTEP_SKIPPING, ENABLE_MASK, cache_noise_pred, update_mask, GLOBAL_TIMESTEP_DATA, AllTSDataList, LOOP_Layer, update_mask_inTS_for_all_data_types_diffvalue
         except ImportError:
             # If import fails, set functions to None to disable skipping
+            print("Import error in transformer_sd3.py")
+            import pdb; pdb.set_trace()
             GLOBAL_TIMESTEP_SKIP_STATE = None
             cache_GLOBAL_TIMESTEP_DATA = None
             cache_noise_pred = None
@@ -374,7 +376,6 @@ class SD3Transformer2DModel(
             GLOBAL_TIMESTEP_DATA = None
             LOOP_Layer = None
             AllTSDataList = None
-            update_mask_inTS = None
             TOPK_RATIO = None
         
         if joint_attention_kwargs is not None:
@@ -443,6 +444,12 @@ class SD3Transformer2DModel(
                 if hasattr(block, 'attn2') and block.attn2 is not None:
                     block.attn2._current_layer_index = index_block
                     block.attn2._current_timestep_index = getattr(self, '_current_timestep_index', None)
+                if hasattr(block, 'ff') and block.ff is not None:
+                    block.ff._current_layer_index = index_block
+                    block.ff._current_timestep_index = getattr(self, '_current_timestep_index', None)
+                if hasattr(block, 'ff_context') and block.ff_context is not None:
+                    block.ff_context._current_layer_index = index_block
+                    block.ff_context._current_timestep_index = getattr(self, '_current_timestep_index', None)         
                            
                 encoder_hidden_states, hidden_states = block(
                     hidden_states=hidden_states,
@@ -451,51 +458,33 @@ class SD3Transformer2DModel(
                     joint_attention_kwargs=joint_attention_kwargs,
                 )
 
-                if ENABLE_TIMESTEP_SKIPPING and GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep] != 0:
-                    mask_num = index_block // LOOP_Layer
-                    full_mask = torch.ones(4096, dtype=torch.bool, device=hidden_states.device)
-                    full_context_mask = torch.ones(333, dtype=torch.bool, device=hidden_states.device)
-                    if ENABLE_MASK:
-                        mask = GLOBAL_TIMESTEP_SKIP_STATE['mask_cache'][mask_num]
-                        full_mask[mask] = True #False
-                        if index_block != 23:
-                            context_mask = GLOBAL_TIMESTEP_SKIP_STATE['context_mask_cache'][mask_num]
-                            full_context_mask[context_mask] = True #False
-                        else:
-                            pass
-                    full_mask = full_mask.unsqueeze(0).unsqueeze(-1)  # [1, 4096, 1]
-                    full_context_mask = full_context_mask.unsqueeze(0).unsqueeze(-1)  # [1, 333, 1]
-                    if GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep] == 1:
-                        psi_hidden_states = 2*AllTSDataList[-1].end[index_block]-AllTSDataList[-2].end[index_block]
-                        # hidden_states = (hidden_states + psi_hidden_states) / 2
-                        hidden_states = torch.where(full_mask, hidden_states, psi_hidden_states)
-                        # pdb.set_trace()
-                        if index_block != 23:
-                            psi_encoder_hidden_states = 2*AllTSDataList[-1].end_context[index_block]-AllTSDataList[-2].end_context[index_block]
-                            # encoder_hidden_states = (encoder_hidden_states + psi_encoder_hidden_states) / 2
-                            encoder_hidden_states = torch.where(full_context_mask, encoder_hidden_states, psi_encoder_hidden_states)
-                    else:
-                        psi_hidden_states = AllTSDataList[-2].end[index_block]
-                        # hidden_states = (hidden_states + psi_hidden_states) / 2
-                        hidden_states = torch.where(full_mask, hidden_states, psi_hidden_states)
-                        if index_block != 23:
-                            psi_encoder_hidden_states = AllTSDataList[-2].end_context[index_block]
-                            # encoder_hidden_states = (encoder_hidden_states + psi_encoder_hidden_states) / 2
-                            encoder_hidden_states = torch.where(full_context_mask, encoder_hidden_states, psi_encoder_hidden_states)
-                
-                if ENABLE_MASK:
-                    GLOBAL_TIMESTEP_DATA.append('end', hidden_states)
-                    GLOBAL_TIMESTEP_DATA.append('end_context', encoder_hidden_states)
+                # if ENABLE_TIMESTEP_SKIPPING and GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep] != 0:
+                #     mode = GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep]
+                #     hidden_states = EchoFlow_opti_with_stored_mask(hidden_states, 'Layer_out', mode, index_block)
+                #     if index_block != 23:
+                #         encoder_hidden_states = EchoFlow_opti_with_stored_mask(encoder_hidden_states, 'Layer_out_context', mode, index_block)
+
+                # if ENABLE_TIMESTEP_SKIPPING and current_timestep < GLOBAL_TIMESTEP_SKIP_STATE['skip_steps'][1]:
+                #     GLOBAL_TIMESTEP_DATA.append('Layer_out', hidden_states)
+                #     if index_block != 23:
+                #         GLOBAL_TIMESTEP_DATA.append('Layer_out_context', encoder_hidden_states)
 
         # controlnet residual
         if block_controlnet_hidden_states is not None and block.context_pre_only is False:
             interval_control = len(self.transformer_blocks) / len(block_controlnet_hidden_states)
             hidden_states = hidden_states + block_controlnet_hidden_states[int(index_block / interval_control)]
         
+        #不管有没有skip，都要cache数据
         cache_GLOBAL_TIMESTEP_DATA(GLOBAL_TIMESTEP_DATA)
-        if ENABLE_MASK and GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep] == 0:
-            update_mask_inTS(TOPK_RATIO)
-            # update_Diffmask_inTS(0, current_timestep)
+        # 只在全精度计算的时候才更新mask
+        if ENABLE_MASK and GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep] == 0 and current_timestep < GLOBAL_TIMESTEP_SKIP_STATE['skip_steps'][1]:
+            # update_mask_inTS(TOPK_RATIO)
+        # if ENABLE_MASK and current_timestep < GLOBAL_TIMESTEP_SKIP_STATE['skip_steps'][1]:
+            # update_mask_inTS_for_all_data_types_zscore(TOPK_RATIO[current_timestep+1], use_zscore=False, enable_hidden_dim_outlier=False)
+            
+            if current_timestep >=2: # 从timestep=2开始更新mask
+                update_mask_inTS_for_all_data_types_diffvalue(TOPK_RATIO[current_timestep+1], use_zscore=False, enable_hidden_dim_outlier=False)
+                # print(f"Timestep {current_timestep+1} TOPK_RATIO: {TOPK_RATIO[current_timestep+1]}")
 
         hidden_states = self.norm_out(hidden_states, temb)
         hidden_states = self.proj_out(hidden_states)

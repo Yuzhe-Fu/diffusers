@@ -1,0 +1,54 @@
+CUDA_VISIBLE_DEVICES=3 python eval_sdm_coco_ditto.py \
+    --mscoco_root /home/yf184/diffusers/StableDiffusion/eval/dataset/mscoco \
+    --model stabilityai/stable-diffusion-3.5-medium \
+    --num_samples 2000 \
+    --steps 50 \
+    --batch 8 \
+    --precision fp16 \
+    --height 512 \
+    --width 512 \
+    --fid_ref full \
+    --save_dir sdm35_mscoco_baseline \
+    --save_k 10 \
+    --save_grid \
+    --ditto_off
+
+
+
+
+CUDA_VISIBLE_DEVICES=2 python eval_sdm_coco_EchoFlow.py \
+    --mscoco_root /home/yf184/diffusers/StableDiffusion/eval/dataset/mscoco \
+    --model stabilityai/stable-diffusion-3.5-medium \
+    --num_samples 2000 \
+    --steps 50 \
+    --batch 1 \
+    --precision fp16 \
+    --height 1024 \
+    --width 1024 \
+    --fid_ref full \
+    --save_dir sdm35_mscoco_echoflow-topk0-Config10-49-5-1 \
+    --save_k 20 \
+    --save_grid \
+    --enable_timestep_skipping \
+    --enable_mask \
+    --skip_steps 10 49 5 1 \
+    --hidden_mask
+
+
+CUDA_VISIBLE_DEVICES=1 python eval_sdm_coco_EchoFlow.py \
+    --mscoco_root /home/yf184/diffusers/StableDiffusion/eval/dataset/mscoco \
+    --model stabilityai/stable-diffusion-3.5-medium \
+    --num_samples 2000 \
+    --steps 50 \
+    --batch 1 \
+    --precision fp16 \
+    --height 1024 \
+    --width 1024 \
+    --fid_ref full \
+    --save_dir sdm35_mscoco_echoflow-topk0.05-Config10-49-5-1 \
+    --save_k 20 \
+    --save_grid \
+    --enable_timestep_skipping \
+    --enable_mask \
+    --skip_steps 10 49 5 1 \
+    --hidden_mask

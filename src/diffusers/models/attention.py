@@ -1785,45 +1785,97 @@ class FeedForward(nn.Module):
             self.net.append(nn.Dropout(dropout))
 
     def forward(self, hidden_states: torch.Tensor, *args, **kwargs) -> torch.Tensor:
+
+        try:
+            import sys
+            import os
+            import logging
+            sys.path.append('/home/yf184/diffusers/StableDiffusion')
+            from Diffusion_config import GLOBAL_TIMESTEP_DATA, GLOBAL_TIMESTEP_SKIP_STATE, LOOP_Layer, ENABLE_TIMESTEP_SKIPPING, cache_noise_pred, get_skipped_noise_pred, update_mask, ENABLE_MASK, EchoFlow_opti_with_stored_mask
+
+        except ImportError:
+            # If import fails, set functions to None to disable skipping
+            print("Import Error in Attention Processor")
+            import pdb; pdb.set_trace()
+            GLOBAL_TIMESTEP_DATA = None
+            AllTSDataList = None
+            GLOBAL_TIMESTEP_SKIP_STATE = None
+            LOOP_Layer = None
+            cache_noise_pred = None
+            get_skipped_noise_pred = None
+            update_mask = None
+            ENABLE_TIMESTEP_SKIPPING = False
+            ENABLE_MASK = False
+
+
         if len(args) > 0 or kwargs.get("scale", None) is not None:
             deprecation_message = "The `scale` argument is deprecated and will be ignored. Please remove it, as passing it will raise an error in the future. `scale` should directly be passed while calling the underlying pipeline component i.e., via `cross_attention_kwargs`."
             deprecate("scale", "1.0.0", deprecation_message)
         
+        current_timestep = getattr(self, '_current_timestep_index', None)
+        current_layer = getattr(self, '_current_layer_index', None)
+        
+        # print(f"current_timestep: {current_timestep}, current_layer: {current_layer}")
         for i, module in enumerate(self.net):
             if isinstance(module, nn.Linear):
-                if getattr(self, 'print_inference_data', False):
-                    print(f"      [LINEAR] net[{i}] - Input: {hidden_states.shape}, Weight: {module.weight.shape}, Bias: {module.bias.shape if module.bias is not None else None}")
+                # if getattr(self, 'print_inference_data', False):
+                #     print(f"      [LINEAR] net[{i}] - Input: {hidden_states.shape}, Weight: {module.weight.shape}, Bias: {module.bias.shape if module.bias is not None else None}")
                 hidden_states = module(hidden_states)
-                if getattr(self, 'print_inference_data', False):
-                    print(f"      [LINEAR] net[{i}] - Output: {hidden_states.shape}")
+                # if getattr(self, 'print_inference_data', False):
+                #     print(f"      [LINEAR] net[{i}] - Output: {hidden_states.shape}")
             elif hasattr(module, 'proj') and hasattr(module, 'gelu'):  # GELU类
-                if getattr(self, 'print_inference_data', False):
-                    print(f"      [LINEAR] net[{i}].proj - Input: {hidden_states.shape}, Weight: {module.proj.weight.shape}, Bias: {module.proj.bias.shape if module.proj.bias is not None else None}")
+                # if getattr(self, 'print_inference_data', False):
+                #     print(f"      [LINEAR] net[{i}].proj - Input: {hidden_states.shape}, Weight: {module.proj.weight.shape}, Bias: {module.proj.bias.shape if module.proj.bias is not None else None}")
                 hidden_states = module.proj(hidden_states)
-                if getattr(self, 'print_inference_data', False):
-                    print(f"      [LINEAR] net[{i}].proj - Output: {hidden_states.shape}")
-                    print(f"      [ACTIVATION] net[{i}].gelu - Input: {hidden_states.shape}")
+                if hidden_states.shape[1] > 1000:
+                    if ENABLE_TIMESTEP_SKIPPING and GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep] != 0:
+                        mode = GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep]
+                        hidden_states = EchoFlow_opti_with_stored_mask(hidden_states, 'MLP_up_out', mode, current_layer)
+                    if ENABLE_TIMESTEP_SKIPPING and current_timestep < GLOBAL_TIMESTEP_SKIP_STATE['skip_steps'][1]:
+                        GLOBAL_TIMESTEP_DATA.append('MLP_up_out', hidden_states)
+                # elif hidden_states.shape[1] <= 1000:
+                #     try:
+                #         if ENABLE_TIMESTEP_SKIPPING and GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep] != 0:
+                #             mode = GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep]
+                #             hidden_states = EchoFlow_opti_with_stored_mask(hidden_states, 'MLP_up_out_context', mode, current_layer)
+                #             if ENABLE_TIMESTEP_SKIPPING and current_timestep < GLOBAL_TIMESTEP_SKIP_STATE['skip_steps'][1]:
+                #                 GLOBAL_TIMESTEP_DATA.append('MLP_up_out_context', hidden_states)
+                #     except Exception as e:
+                #         print(f"Error in MLP_up_out_context: {e}")
+                #         import pdb; pdb.set_trace()
+                    
+                # if getattr(self, 'print_inference_data', False):
+                #     print(f"      [LINEAR] net[{i}].proj - Output: {hidden_states.shape}")
+                #     print(f"      [ACTIVATION] net[{i}].gelu - Input: {hidden_states.shape}")
                 hidden_states = module.gelu(hidden_states)
-                if getattr(self, 'print_inference_data', False):
-                    print(f"      [ACTIVATION] net[{i}].gelu - Output: {hidden_states.shape}")
+                #     print(f"      [ACTIVATION] net[{i}].gelu - Output: {hidden_states.shape}")
             elif hasattr(module, 'proj1') and hasattr(module, 'proj2'):  # GEGLU类
-                if getattr(self, 'print_inference_data', False):
-                    print(f"      [LINEAR] net[{i}].proj1 - Input: {hidden_states.shape}, Weight: {module.proj1.weight.shape}, Bias: {module.proj1.bias.shape if module.proj1.bias is not None else None}")
+                #     print(f"      [LINEAR] net[{i}].proj1 - Input: {hidden_states.shape}, Weight: {module.proj1.weight.shape}, Bias: {module.proj1.bias.shape if module.proj1.bias is not None else None}")
                 hidden_states = module.proj1(hidden_states)
-                if getattr(self, 'print_inference_data', False):
-                    print(f"      [LINEAR] net[{i}].proj1 - Output: {hidden_states.shape}")
-                    print(f"      [ACTIVATION] net[{i}].gelu - Input: {hidden_states.shape}")
+                #     print(f"      [LINEAR] net[{i}].proj1 - Output: {hidden_states.shape}")
+                #     print(f"      [ACTIVATION] net[{i}].gelu - Input: {hidden_states.shape}")
                 hidden_states = module.gelu(hidden_states)
-                if getattr(self, 'print_inference_data', False):
-                    print(f"      [ACTIVATION] net[{i}].gelu - Output: {hidden_states.shape}")
-                    print(f"      [LINEAR] net[{i}].proj2 - Input: {hidden_states.shape}, Weight: {module.proj2.weight.shape}, Bias: {module.proj2.bias.shape if module.proj2.bias is not None else None}")
+                #     print(f"      [ACTIVATION] net[{i}].gelu - Output: {hidden_states.shape}")
+                #     print(f"      [LINEAR] net[{i}].proj2 - Input: {hidden_states.shape}, Weight: {module.proj2.weight.shape}, Bias: {module.proj2.bias.shape if module.proj2.bias is not None else None}")
                 hidden_states = module.proj2(hidden_states)
-                if getattr(self, 'print_inference_data', False):
-                    print(f"      [LINEAR] net[{i}].proj2 - Output: {hidden_states.shape}")
+                # if getattr(self, 'print_inference_data', False):
+                #     print(f"      [LINEAR] net[{i}].proj2 - Output: {hidden_states.shape}")
             else:
-                if getattr(self, 'print_inference_data', False):
-                    print(f"      [OTHER] net[{i}] ({module.__class__.__name__}) - Input: {hidden_states.shape}")
+                # if getattr(self, 'print_inference_data', False):
+                #     print(f"      [OTHER] net[{i}] ({module.__class__.__name__}) - Input: {hidden_states.shape}")
                 hidden_states = module(hidden_states)
-                if getattr(self, 'print_inference_data', False):
-                    print(f"      [OTHER] net[{i}] ({module.__class__.__name__}) - Output: {hidden_states.shape}")
+                if hidden_states.shape[1] > 1000:
+                    if ENABLE_TIMESTEP_SKIPPING and GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep] != 0:
+                        mode = GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep]
+                        hidden_states = EchoFlow_opti_with_stored_mask(hidden_states, 'MLP_down_out', mode, current_layer)
+                    if ENABLE_TIMESTEP_SKIPPING and current_timestep < GLOBAL_TIMESTEP_SKIP_STATE['skip_steps'][1]:
+                        GLOBAL_TIMESTEP_DATA.append('MLP_down_out', hidden_states)
+                # elif hidden_states.shape[1] <= 1000:
+                #     if ENABLE_TIMESTEP_SKIPPING and GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep] != 0:
+                #         mode = GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep]
+                #         hidden_states = EchoFlow_opti_with_stored_mask(hidden_states, 'MLP_down_out_context', mode, current_layer)
+                #     if ENABLE_TIMESTEP_SKIPPING and current_timestep < GLOBAL_TIMESTEP_SKIP_STATE['skip_steps'][1]:
+                #         GLOBAL_TIMESTEP_DATA.append('MLP_down_out_context', hidden_states)
+                # if getattr(self, 'print_inference_data', False):
+                #     print(f"      [OTHER] net[{i}] ({module.__class__.__name__}) - Output: {hidden_states.shape}")
         return hidden_states
