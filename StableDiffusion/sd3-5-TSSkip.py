@@ -62,14 +62,14 @@ def main():
     """Main execution function"""
     # Set random seed
     set_seed(42)
-    # original SD3.5 pipeline
+    #### original SD3.5 pipeline
     Diffusion_config.ENABLE_TIMESTEP_SKIPPING = False  # 启用timestep跳除功能
     Diffusion_config.ENABLE_MASK = False
     pipeline = setup_model_and_pipeline()
     pipeline = setup_scheduler_callback(pipeline)
 
-    # prompt = "a tiny astronaut hatching from an egg on the moon"
-    prompt = "Cinematic photograph of a dark cat walking in the fantasy moonlight garden"
+    prompt = "a tiny astronaut hatching from an egg on the moon"
+    # prompt = "Cinematic photograph of a dark cat walking in the fantasy moonlight garden"
     logger.info(f"Generating image with prompt: '{prompt}'")
     
     with torch.no_grad():
@@ -81,20 +81,20 @@ def main():
     # config_list = [9, 10, 11, 12]
 
     # EchoFlow
-    config_list = [0,0.1,0.2,0.3]
+    config_list = [0, 0.01, 0.03, 0.05, 0.1]
     for config_num in config_list:
         reset_global_state()
-        Diffusion_config.GLOBAL_TIMESTEP_SKIP_STATE['skip_steps'] = [7, 49, 3, 1] # [start TS, end TS, Skip loop, 1目前没啥作用]
+        Diffusion_config.GLOBAL_TIMESTEP_SKIP_STATE['skip_steps'] = [10, 49, 5, 1] # [start TS, end TS, Skip loop, 1目前没啥作用]
         Diffusion_config.LOOP_Layer = Diffusion_config.GLOBAL_TIMESTEP_SKIP_STATE['skip_steps'][3]
         Diffusion_config.ENABLE_TIMESTEP_SKIPPING = True
         Diffusion_config.ENABLE_MASK = True
         Diffusion_config.Hidden_MASK = True # 这个目前也没啥作用
         Diffusion_config.Context_MASK = False #这个目前也没啥作用
+        Diffusion_config.MaskGeneratedbyInput = True #新更新的，我基于每一层输入数据来判断哪些token和之前cache的变化更大，选出mask，同时每一层的mask会继承
         temp = [config_num] * 50
         Diffusion_config.TOPK_RATIO = temp #设置生成mask的timestep下的topk比例，一共有50个TS,但代码逻辑是，只在TS为全计算时才会基于下一次TS的topk生成mask
         Diffusion_config.generate_ts_state()
         Diffusion_config.generate_GLOBAL_GETMASK_LAYER()
-        print(f"Timestep Skip State: {Diffusion_config.GLOBAL_TIMESTEP_SKIP_STATE}")
 
         # a list with 50个元素，每个元素为0.05
         # temp = [1, 0.5, 0.4, 0.4, 0.4,
@@ -126,8 +126,8 @@ def main():
         # pipeline = setup_scheduler_callback(pipeline)
 
         # Generate image
-        # prompt = "a tiny astronaut hatching from an egg on the moon"
-        prompt = "Cinematic photograph of a dark cat walking in the fantasy moonlight garden"
+        prompt = "a tiny astronaut hatching from an egg on the moon"
+        # prompt = "Cinematic photograph of a dark cat walking in the fantasy moonlight garden"
         logger.info(f"Generating image with prompt: '{prompt}'")
         
         set_seed(42)
@@ -136,7 +136,7 @@ def main():
         del pipeline
         torch.cuda.empty_cache()
 
-        save_image_name = f"./StableDiffusion/logs/Cat-config_{config_num}-diffMask.png"
+        save_image_name = f"./StableDiffusion/logs/Astronaut-config_{config_num}-MaskGeneratedbyInput.png"
         save_image([ori_output[0], cap_output[0]], save_image_name)
         logging.info(f"Saved to Cat-config_{config_num}.png. Done!")
 

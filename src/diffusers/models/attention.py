@@ -1791,7 +1791,7 @@ class FeedForward(nn.Module):
             import os
             import logging
             sys.path.append('/home/yf184/diffusers/StableDiffusion')
-            from Diffusion_config import GLOBAL_TIMESTEP_DATA, GLOBAL_TIMESTEP_SKIP_STATE, LOOP_Layer, ENABLE_TIMESTEP_SKIPPING, cache_noise_pred, get_skipped_noise_pred, update_mask, ENABLE_MASK, EchoFlow_opti_with_stored_mask
+            from Diffusion_config import DATA_TYPE_NAMES,GLOBAL_TIMESTEP_DATA, GLOBAL_TIMESTEP_SKIP_STATE, LOOP_Layer,GLOBAL_TIMESTEP_InputDATA, ENABLE_TIMESTEP_SKIPPING, cache_noise_pred, get_skipped_noise_pred, update_mask, ENABLE_MASK, EchoFlow_opti_with_stored_mask
 
         except ImportError:
             # If import fails, set functions to None to disable skipping
@@ -1799,6 +1799,7 @@ class FeedForward(nn.Module):
             import pdb; pdb.set_trace()
             GLOBAL_TIMESTEP_DATA = None
             AllTSDataList = None
+            GLOBAL_TIMESTEP_InputDATA = None
             GLOBAL_TIMESTEP_SKIP_STATE = None
             LOOP_Layer = None
             cache_noise_pred = None
@@ -1826,12 +1827,15 @@ class FeedForward(nn.Module):
             elif hasattr(module, 'proj') and hasattr(module, 'gelu'):  # GELU类
                 # if getattr(self, 'print_inference_data', False):
                 #     print(f"      [LINEAR] net[{i}].proj - Input: {hidden_states.shape}, Weight: {module.proj.weight.shape}, Bias: {module.proj.bias.shape if module.proj.bias is not None else None}")
+                # if ENABLE_TIMESTEP_SKIPPING and current_timestep < GLOBAL_TIMESTEP_SKIP_STATE['skip_steps'][1]:
+                #     GLOBAL_TIMESTEP_InputDATA.append('MLP_up_in', hidden_states)
+                
                 hidden_states = module.proj(hidden_states)
                 if hidden_states.shape[1] > 1000:
-                    if ENABLE_TIMESTEP_SKIPPING and GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep] != 0:
+                    if ENABLE_TIMESTEP_SKIPPING and GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep] != 0 and 'MLP_up_out' in DATA_TYPE_NAMES:
                         mode = GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep]
                         hidden_states = EchoFlow_opti_with_stored_mask(hidden_states, 'MLP_up_out', mode, current_layer)
-                    if ENABLE_TIMESTEP_SKIPPING and current_timestep < GLOBAL_TIMESTEP_SKIP_STATE['skip_steps'][1]:
+                    if ENABLE_TIMESTEP_SKIPPING and current_timestep < GLOBAL_TIMESTEP_SKIP_STATE['skip_steps'][1] and 'MLP_up_out' in DATA_TYPE_NAMES:
                         GLOBAL_TIMESTEP_DATA.append('MLP_up_out', hidden_states)
                 # elif hidden_states.shape[1] <= 1000:
                 #     try:
@@ -1863,12 +1867,14 @@ class FeedForward(nn.Module):
             else:
                 # if getattr(self, 'print_inference_data', False):
                 #     print(f"      [OTHER] net[{i}] ({module.__class__.__name__}) - Input: {hidden_states.shape}")
+                # if ENABLE_TIMESTEP_SKIPPING and current_timestep < GLOBAL_TIMESTEP_SKIP_STATE['skip_steps'][1]:
+                #     GLOBAL_TIMESTEP_InputDATA.append('MLP_down_in', hidden_states)
                 hidden_states = module(hidden_states)
                 if hidden_states.shape[1] > 1000:
-                    if ENABLE_TIMESTEP_SKIPPING and GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep] != 0:
+                    if ENABLE_TIMESTEP_SKIPPING and GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep] != 0 and 'MLP_down_out' in DATA_TYPE_NAMES:
                         mode = GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep]
                         hidden_states = EchoFlow_opti_with_stored_mask(hidden_states, 'MLP_down_out', mode, current_layer)
-                    if ENABLE_TIMESTEP_SKIPPING and current_timestep < GLOBAL_TIMESTEP_SKIP_STATE['skip_steps'][1]:
+                    if ENABLE_TIMESTEP_SKIPPING and current_timestep < GLOBAL_TIMESTEP_SKIP_STATE['skip_steps'][1] and 'MLP_down_out' in DATA_TYPE_NAMES:
                         GLOBAL_TIMESTEP_DATA.append('MLP_down_out', hidden_states)
                 # elif hidden_states.shape[1] <= 1000:
                 #     if ENABLE_TIMESTEP_SKIPPING and GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep] != 0:

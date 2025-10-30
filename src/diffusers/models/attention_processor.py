@@ -1447,12 +1447,12 @@ class JointAttnProcessor2_0:
             import os
             import logging
             sys.path.append('/home/yf184/diffusers/StableDiffusion')
-            from Diffusion_config import GLOBAL_TIMESTEP_DATA,Hidden_MASK,Context_MASK, AllTSDataList, GLOBAL_TIMESTEP_SKIP_STATE, LOOP_Layer, ENABLE_TIMESTEP_SKIPPING, cache_noise_pred, get_skipped_noise_pred, update_mask, ENABLE_MASK, EchoFlow_opti_with_stored_mask
+            from Diffusion_config import GLOBAL_TIMESTEP_DATA, update_mask_inTS_basedon_DiffinputData, GLOBAL_TIMESTEP_InputDATA, DATA_TYPE_NAMES,Hidden_MASK,Context_MASK, AllTSDataList, GLOBAL_TIMESTEP_SKIP_STATE, LOOP_Layer, ENABLE_TIMESTEP_SKIPPING, cache_noise_pred, get_skipped_noise_pred, update_mask, ENABLE_MASK, EchoFlow_opti_with_stored_mask, cache_GLOBAL_TIMESTEP_DATA, GLOBAL_TIMESTEP_InputDATA, MaskGeneratedbyInput, TOPK_RATIO
 
         except ImportError:
             # If import fails, set functions to None to disable skipping
             print("Import Error in Attention Processor")
-            import pdb; pdb.set_trace()
+            # import pdb; pdb.set_trace()
             GLOBAL_TIMESTEP_DATA = None
             AllTSDataList = None
             GLOBAL_TIMESTEP_SKIP_STATE = None
@@ -1462,7 +1462,13 @@ class JointAttnProcessor2_0:
             update_mask = None
             ENABLE_TIMESTEP_SKIPPING = False
             ENABLE_MASK = False
-
+        
+        if attention_type == 'JointAttention' and MaskGeneratedbyInput:
+            # import pdb; pdb.set_trace()
+            GLOBAL_TIMESTEP_InputDATA.append('JA_in', hidden_states)
+            if ENABLE_MASK and GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep] != 0 and current_timestep < GLOBAL_TIMESTEP_SKIP_STATE['skip_steps'][1] and MaskGeneratedbyInput:
+                update_mask_inTS_basedon_DiffinputData(hidden_states, current_layer, top_k=TOPK_RATIO[current_timestep], use_zscore=False, enable_hidden_dim_outlier=False)
+                # print(f'timestep {current_timestep} layer {current_layer}, mask: {GLOBAL_TIMESTEP_SKIP_STATE["mask_cache"].JA_in[current_layer]}')
         # `sample` projections.
         # if getattr(attn, 'print_inference_data', False):
         #     print(f"    [LINEAR] to_q - Input: {hidden_states.shape}, Weight: {attn.to_q.weight.shape}, Bias: {attn.to_q.bias.shape if attn.to_q.bias is not None else None}")
@@ -1482,24 +1488,31 @@ class JointAttnProcessor2_0:
         # if getattr(attn, 'print_inference_data', False):
         #     print(f"    [LINEAR] to_v - Output: {value.shape}")
         # apply algorithm here
-        if ENABLE_TIMESTEP_SKIPPING and GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep] != 0:            
+        #我想在这里判断是否JA_toq存在于global变量的DATA_TYPE_NAMES中
+
+        if ENABLE_TIMESTEP_SKIPPING and GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep] != 0 and 'JA_toq' in DATA_TYPE_NAMES:           
             mode = GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep]
             if mode != 0:
                 if attention_type == 'JointAttention':
-                    query = EchoFlow_opti_with_stored_mask(query, 'JA_toq', mode, current_layer)
-                    key = EchoFlow_opti_with_stored_mask(key, 'JA_tok', mode, current_layer)
-                    value = EchoFlow_opti_with_stored_mask(value, 'JA_tov', mode, current_layer)
+                    if 'JA_toq' in DATA_TYPE_NAMES:
+                        query = EchoFlow_opti_with_stored_mask(query, 'JA_toq', mode, current_layer)
+                    if 'JA_tok' in DATA_TYPE_NAMES:
+                        key = EchoFlow_opti_with_stored_mask(key, 'JA_tok', mode, current_layer)
+                    if 'JA_tov' in DATA_TYPE_NAMES:
+                        value = EchoFlow_opti_with_stored_mask(value, 'JA_tov', mode, current_layer)
                 elif attention_type == 'DualAttention':
-                    query = EchoFlow_opti_with_stored_mask(query, 'DA_toq', mode, current_layer)
-                    key = EchoFlow_opti_with_stored_mask(key, 'DA_tok', mode, current_layer)
-                    value = EchoFlow_opti_with_stored_mask(value, 'DA_tov', mode, current_layer)
-
+                    if 'DA_toq' in DATA_TYPE_NAMES:
+                        query = EchoFlow_opti_with_stored_mask(query, 'DA_toq', mode, current_layer)
+                    if 'DA_tok' in DATA_TYPE_NAMES:
+                        key = EchoFlow_opti_with_stored_mask(key, 'DA_tok', mode, current_layer)
+                    if 'DA_tov' in DATA_TYPE_NAMES:
+                        value = EchoFlow_opti_with_stored_mask(value, 'DA_tov', mode, current_layer)
 
         # save data here.
         # import pdb
         # pdb.set_trace()
         
-        if ENABLE_TIMESTEP_SKIPPING and current_timestep < GLOBAL_TIMESTEP_SKIP_STATE['skip_steps'][1]:
+        if ENABLE_TIMESTEP_SKIPPING and current_timestep < GLOBAL_TIMESTEP_SKIP_STATE['skip_steps'][1] and 'JA_toq' in DATA_TYPE_NAMES:           
             # if current_layer > 13:
             #     import pdb; pdb.set_trace()
             # print(f"current_layer: {current_layer}, attention_type: {attention_type}")
@@ -1511,7 +1524,6 @@ class JointAttnProcessor2_0:
                 GLOBAL_TIMESTEP_DATA.append('DA_toq', query)
                 GLOBAL_TIMESTEP_DATA.append('DA_tok', key)
                 GLOBAL_TIMESTEP_DATA.append('DA_tov', value)
-
         inner_dim = key.shape[-1]
         head_dim = inner_dim // attn.heads
 
@@ -1531,17 +1543,18 @@ class JointAttnProcessor2_0:
             encoder_hidden_states_key_proj = attn.add_k_proj(encoder_hidden_states)
             encoder_hidden_states_value_proj = attn.add_v_proj(encoder_hidden_states)
             # =============================
-            if ENABLE_TIMESTEP_SKIPPING and GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep] != 0:
+            if ENABLE_TIMESTEP_SKIPPING and GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep] != 0 and 'JA_toq_context' in DATA_TYPE_NAMES:
                 mode = GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep]
                 if mode != 0:
                     encoder_hidden_states_query_proj = EchoFlow_opti_with_stored_mask(encoder_hidden_states_query_proj, 'JA_toq_context', mode, current_layer)
                     encoder_hidden_states_key_proj = EchoFlow_opti_with_stored_mask(encoder_hidden_states_key_proj, 'JA_tok_context', mode, current_layer)
                     encoder_hidden_states_value_proj = EchoFlow_opti_with_stored_mask(encoder_hidden_states_value_proj, 'JA_tov_context', mode, current_layer)
 
-            if ENABLE_TIMESTEP_SKIPPING and current_timestep < GLOBAL_TIMESTEP_SKIP_STATE['skip_steps'][1]:
+            if ENABLE_TIMESTEP_SKIPPING and current_timestep < GLOBAL_TIMESTEP_SKIP_STATE['skip_steps'][1] and 'JA_toq_context' in DATA_TYPE_NAMES:
                 GLOBAL_TIMESTEP_DATA.append('JA_toq_context', encoder_hidden_states_query_proj)
                 GLOBAL_TIMESTEP_DATA.append('JA_tok_context', encoder_hidden_states_key_proj)
                 GLOBAL_TIMESTEP_DATA.append('JA_tov_context', encoder_hidden_states_value_proj)
+                # GLOBAL_TIMESTEP_InputDATA.append('JA_context_in', encoder_hidden_states)
             # =============================
 
             encoder_hidden_states_query_proj = encoder_hidden_states_query_proj.view(
@@ -1600,17 +1613,21 @@ class JointAttnProcessor2_0:
             )
             if not attn.context_pre_only:
                 encoder_hidden_states = attn.to_add_out(encoder_hidden_states)
-
+        # if ENABLE_TIMESTEP_SKIPPING and current_timestep < GLOBAL_TIMESTEP_SKIP_STATE['skip_steps'][1]:
+        #     if attention_type == 'JointAttention':
+        #         GLOBAL_TIMESTEP_InputDATA.append('JA_Linear_in', hidden_states)
+        #     elif attention_type == 'DualAttention':
+        #         GLOBAL_TIMESTEP_InputDATA.append('DA_Linear_in', hidden_states)
         hidden_states = attn.to_out[0](hidden_states) # a linear layer
 
-        if ENABLE_TIMESTEP_SKIPPING and GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep] != 0:
+        if ENABLE_TIMESTEP_SKIPPING and GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep] != 0 and 'JA_out' in DATA_TYPE_NAMES:
             mode = GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep]
             if attention_type == 'JointAttention':
                 hidden_states = EchoFlow_opti_with_stored_mask(hidden_states, 'JA_out', mode, current_layer)
             elif attention_type == 'DualAttention':
                 hidden_states = EchoFlow_opti_with_stored_mask(hidden_states, 'DA_out', mode, current_layer)
         # import pdb; pdb.set_trace()
-        if ENABLE_TIMESTEP_SKIPPING and current_timestep < GLOBAL_TIMESTEP_SKIP_STATE['skip_steps'][1]:
+        if ENABLE_TIMESTEP_SKIPPING and current_timestep < GLOBAL_TIMESTEP_SKIP_STATE['skip_steps'][1] and 'JA_out' in DATA_TYPE_NAMES:
             if attention_type == 'JointAttention':
                 GLOBAL_TIMESTEP_DATA.append('JA_out', hidden_states)
             elif attention_type == 'DualAttention':

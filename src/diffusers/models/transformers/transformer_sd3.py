@@ -362,7 +362,7 @@ class SD3Transformer2DModel(
             import os
             import logging
             sys.path.append('/home/yf184/diffusers/StableDiffusion')
-            from Diffusion_config import GLOBAL_TIMESTEP_SKIP_STATE, cache_GLOBAL_TIMESTEP_DATA,update_mask_inTS_for_all_data_types_zscore,EchoFlow_opti_with_stored_mask, TOPK_RATIO, ENABLE_TIMESTEP_SKIPPING, ENABLE_MASK, cache_noise_pred, update_mask, GLOBAL_TIMESTEP_DATA, AllTSDataList, LOOP_Layer, update_mask_inTS_for_all_data_types_diffvalue
+            from Diffusion_config import GLOBAL_TIMESTEP_SKIP_STATE, cache_GLOBAL_TIMESTEP_DATA,update_mask_inTS_for_all_data_types_zscore,EchoFlow_opti_with_stored_mask, TOPK_RATIO, ENABLE_TIMESTEP_SKIPPING, ENABLE_MASK, cache_noise_pred, update_mask, GLOBAL_TIMESTEP_DATA, AllTSDataList, LOOP_Layer, update_mask_inTS_for_all_data_types_diffvalue, cache_GLOBAL_TIMESTEP_InputDATA, GLOBAL_TIMESTEP_InputDATA, TimestepData
         except ImportError:
             # If import fails, set functions to None to disable skipping
             print("Import error in transformer_sd3.py")
@@ -377,7 +377,7 @@ class SD3Transformer2DModel(
             LOOP_Layer = None
             AllTSDataList = None
             TOPK_RATIO = None
-        
+
         if joint_attention_kwargs is not None:
             joint_attention_kwargs = joint_attention_kwargs.copy()
             lora_scale = joint_attention_kwargs.pop("scale", 1.0)
@@ -476,15 +476,17 @@ class SD3Transformer2DModel(
         
         #不管有没有skip，都要cache数据
         cache_GLOBAL_TIMESTEP_DATA(GLOBAL_TIMESTEP_DATA)
+        GLOBAL_TIMESTEP_SKIP_STATE['mask_cache'] = TimestepData(is_input=True)
+        cache_GLOBAL_TIMESTEP_InputDATA(GLOBAL_TIMESTEP_InputDATA)
         # 只在全精度计算的时候才更新mask
-        if ENABLE_MASK and GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep] == 0 and current_timestep < GLOBAL_TIMESTEP_SKIP_STATE['skip_steps'][1]:
+        # if ENABLE_MASK and GLOBAL_TIMESTEP_SKIP_STATE['TS_STATE'][current_timestep] == 0 and current_timestep < GLOBAL_TIMESTEP_SKIP_STATE['skip_steps'][1]:
             # update_mask_inTS(TOPK_RATIO)
         # if ENABLE_MASK and current_timestep < GLOBAL_TIMESTEP_SKIP_STATE['skip_steps'][1]:
             # update_mask_inTS_for_all_data_types_zscore(TOPK_RATIO[current_timestep+1], use_zscore=False, enable_hidden_dim_outlier=False)
             
-            if current_timestep >=2: # 从timestep=2开始更新mask
-                update_mask_inTS_for_all_data_types_diffvalue(TOPK_RATIO[current_timestep+1], use_zscore=False, enable_hidden_dim_outlier=False)
-                # print(f"Timestep {current_timestep+1} TOPK_RATIO: {TOPK_RATIO[current_timestep+1]}")
+            # if current_timestep >=2: # 从timestep=2开始更新mask
+            #     update_mask_inTS_for_all_data_types_diffvalue(TOPK_RATIO[current_timestep+1], use_zscore=False, enable_hidden_dim_outlier=False)
+            #     print(f"Timestep {current_timestep+1} TOPK_RATIO: {TOPK_RATIO[current_timestep+1]}")
 
         hidden_states = self.norm_out(hidden_states, temb)
         hidden_states = self.proj_out(hidden_states)
